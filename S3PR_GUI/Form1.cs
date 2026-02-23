@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms.VisualStyles;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
@@ -18,6 +19,7 @@ namespace S3PR_GUI
         private bool stopExecution = false;
         private string lastFile = "";
         private bool isDone = false;
+        private string defaultWindowTitle = "Sims 3 Package Reducer (S3PR) by OhRudi";
 
         public Form1()
         {
@@ -29,14 +31,23 @@ namespace S3PR_GUI
          */
         private void Form1_Load(object sender, EventArgs e)
         {
-            this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
-            string path_default = "";
+            // set window title by assembly title and assembly version
+            Text = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? defaultWindowTitle;
+            Text = $"{Text} Version {Assembly.GetEntryAssembly()?.GetName().Version?.ToString()}";
+            
+            // set icon (cause any other did not work)
+            this.Icon = Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
+            string path_default;
+
+            // set last values, that user used last time
             checkBox1.Checked = Properties.Settings.Default.checkBox1;
             checkBox2.Checked = Properties.Settings.Default.checkBox2;
             checkBox3.Checked = Properties.Settings.Default.checkBox3;
             checkBox4.Checked = Properties.Settings.Default.checkBox4;
             checkBox5.Checked = Properties.Settings.Default.checkBox5;
             textBox1.Text = Properties.Settings.Default.textBox1;
+
+            // set default path to mods folder
             if (string.IsNullOrEmpty(textBox1.Text) &&
                 Path.Exists(path_default = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Electronic Arts", "The Sims 3", "Mods")))
             {
