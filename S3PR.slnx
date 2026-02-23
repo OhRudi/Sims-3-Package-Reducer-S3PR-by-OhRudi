@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="S3PR/S3PR.csproj" />
+  <Project Path="S3PR_GUI/S3PR_GUI.csproj" />
+</Solution>

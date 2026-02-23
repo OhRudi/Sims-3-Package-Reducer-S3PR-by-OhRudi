@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11505.172 d18.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "S3PR", "S3PR.csproj", "{CA91A7FF-364A-B995-A390-518172E27C6B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CA91A7FF-364A-B995-A390-518172E27C6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA91A7FF-364A-B995-A390-518172E27C6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA91A7FF-364A-B995-A390-518172E27C6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA91A7FF-364A-B995-A390-518172E27C6B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FF30C987-8138-47F9-BEA1-2FF8AA0C8B3D}
+	EndGlobalSection
+EndGlobal
