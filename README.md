@@ -34,8 +34,8 @@ Further explenations and releases of this software you can find on [ModTheSims](
 - I used __Visual Studio 2026 with .NET 10.0__ and WinForms API to create the GUI
 
 ## Big thanks to ...
-[Sims 3 Easy Extractor & Merger Tools](https://simblr.cc/ts3/mod/7154-sims-3-easy-extractor-merger-tools.html) by phantom99 (their project and open source code inspired me to do this)
-[Sims 3 Package Interface](https://sourceforge.net/projects/s3pi/) by Peter L Jones
-[Sims 3 Recompressor (S3RC) Tool](http://www.moreawesomethanyou.com/smf/index.php/topic,15129.0.html) by J. M. Pescado
-[Pixlr.com](https://pixlr.com/) which I always use for free image editing
-AND to this awesome and still alive community of simmers ^^
+- [Sims 3 Easy Extractor & Merger Tools](https://simblr.cc/ts3/mod/7154-sims-3-easy-extractor-merger-tools.html) by phantom99 (their project and open source code inspired me to do this)
+- [Sims 3 Package Interface](https://sourceforge.net/projects/s3pi/) by Peter L Jones
+- [Sims 3 Recompressor (S3RC) Tool](http://www.moreawesomethanyou.com/smf/index.php/topic,15129.0.html) by J. M. Pescado
+- [Pixlr.com](https://pixlr.com/) which I always use for free image editing
+- AND to this awesome and still alive community of simmers ^^
