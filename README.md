@@ -38,4 +38,6 @@ Further explenations and releases of this software you can find on [ModTheSims](
 - [Sims 3 Package Interface](https://sourceforge.net/projects/s3pi/) by Peter L Jones
 - [Sims 3 Recompressor (S3RC) Tool](http://www.moreawesomethanyou.com/smf/index.php/topic,15129.0.html) by J. M. Pescado
 - [Pixlr.com](https://pixlr.com/) which I always use for free image editing
+- [Seasons Coat with Buttons for teens](https://simblr.cc/ts3/mod/6669-seasons-coat-with-buttons-for-teens.html) by sweetdevil, which I used for example pictures
+- [Set of hairstyles Skysims](https://simblr.cc/ts3/mod/6714-set-of-hairstyles-skysims.html) by Agnelid, which I used for example pictures
 - AND to this awesome and still alive community of simmers ^^
