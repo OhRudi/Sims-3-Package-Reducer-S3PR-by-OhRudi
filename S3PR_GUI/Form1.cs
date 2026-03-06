@@ -17,7 +17,7 @@ namespace S3PR_GUI
     {
 
         private bool stopExecution = false;
-        private string lastFile = "";
+        private string lastPath = "";
         private bool isDone = false;
         private string defaultWindowTitle = "Sims 3 Package Reducer (S3PR) by OhRudi";
 
@@ -126,6 +126,9 @@ namespace S3PR_GUI
 
                 // reset is done flag
                 isDone = false;
+
+                // reset skipped files counter
+                resetSkippedFilesCounter();
             }
             else
             {
@@ -135,7 +138,7 @@ namespace S3PR_GUI
                 // update loading label
                 if (!isDone)
                 {
-                    updateLoadingLabel($"Stops after finishing: {Path.GetFileName(lastFile)} ...");
+                    updateLoadingLabel($"Stops after finishing: {Path.GetFileName(lastPath)} ...");
                 }
             }
         }
@@ -153,7 +156,7 @@ namespace S3PR_GUI
             string[] pathFolderList = textBox1.Text.Split(", ");
             List<string> pathFileList = new List<string>();
             int progress = 0;
-            int progessTillStopped = 0;
+            int progressTillStopped = 0;
             double fileSizeBeforeInByte = 0;
             double fileSizeAfterInByte = 0;
             string pathS3RC = ExtractS3RC();
@@ -166,7 +169,7 @@ namespace S3PR_GUI
 
             if (removeIcons == false && removeThumbnails == false && compressFile == false)
             {
-                MessageBox.Show($"Please click \"{checkBox1.Text}\" or \"{checkBox2.Text}\" or both to remove anything from Package-Files.", "What should be removed?", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Please click at least one of the options (like \"{checkBox1.Text}\", \"{checkBox2.Text}\", etc.) to edit the Package-Files.", "What to do? You missed something", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -175,6 +178,8 @@ namespace S3PR_GUI
                 // find all package files in all folders
                 foreach (string pathFolder in pathFolderList)
                 {
+                    lastPath = pathFolder;
+                    if (!Path.Exists(pathFolder)) throw new Exception("This Folder does not exist.");
                     pathFileList = pathFileList.Concat(from file in Directory.GetFiles(pathFolder, "*.*", searchRecursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
                                                        where file.EndsWith(".package", StringComparison.OrdinalIgnoreCase)
                                                        select file).ToList<string>();
@@ -183,7 +188,7 @@ namespace S3PR_GUI
                 // warn that no package files exist in the source folder
                 if (pathFileList.Count <= 0)
                 {
-                    MessageBox.Show($"The selected folder{(pathFolderList.Length > 1 ? "s do" : " does")} not contain any Package-Files. Please select another Folder.", "No Package Files found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show($"The selected folder{(pathFolderList.Length > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.", "No Package Files found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -193,8 +198,8 @@ namespace S3PR_GUI
                     updateLoadingLabel($"Reducing {Path.GetFileName(pathFile)} ...");
                     if (!stopExecution)
                     {
-                        progessTillStopped++;
-                        lastFile = pathFile;
+                        progressTillStopped++;
+                        lastPath = pathFile;
                         fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
                         S3PR.S3PR.RemoveThumbnail = removeThumbnails;
                         S3PR.S3PR.RemoveIcon = removeIcons;
@@ -208,12 +213,7 @@ namespace S3PR_GUI
             }
             catch (Exception exception)
             {
-                MessageBox.Show(
-                    $"Something went wrong!\n\n" +
-                    $"If this happens repeatedly, please tell OhRudi (the Creator) by commenting on the download page.\n\n" +
-                    $"Error Message: {exception.Message}\n\n" +
-                    $"Path: {lastFile}", "Uuupsi ...", MessageBoxButtons.OK, MessageBoxIcon.Error
-                );
+                showErrorMessageBox(exception);
                 return;
             }
             finally
@@ -228,34 +228,103 @@ namespace S3PR_GUI
             // if process got stopped via UI-Button
             if (stopExecution)
             {
-                MessageBox.Show(
-                    $"Process Stopped.\n\n" +
-                    (
-                        fileSizeBeforeInByte == fileSizeAfterInByte || (fileSizeBeforeInByte - fileSizeAfterInByte) < 0
-                        ? $"Before it stopped, it checked {progessTillStopped} Package-File{(progessTillStopped > 1 ? "s" : "")} but, {(progessTillStopped > 1 ? "they were" : "it was")} already reduced, so nothing changed.\n\n"
-                        : $"Before it stopped, it reduced {progessTillStopped} Package-File{(progessTillStopped > 1 ? "s" : "")} in total by {convertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}\n\n"
-                    ) +
-                    $"Last processed File: {lastFile}",
-                    "Oh, you stopped?",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
-                );
+                showStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
             }
 
             // if process ran sucessfully
             else
             {
-                MessageBox.Show($"Done.\n\n" +
-                    (
-                        fileSizeBeforeInByte == fileSizeAfterInByte || (fileSizeBeforeInByte - fileSizeAfterInByte) < 0
-                        ? $"It checked {pathFileList.Count} Package-File{(progessTillStopped > 1 ? "s" : "")} but, {(progessTillStopped > 1 ? "they were" : "it was")} already reduced, so nothing changed."
-                        : $"Reduced {pathFileList.Count} Package-File{(progessTillStopped > 1 ? "s" : "")} in total by {convertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}"
-                    ),
-                    "Wuhuuu, it's done!",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                showSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
             }
+        }
+
+
+        /**
+         * show error message box
+         */
+        private void showErrorMessageBox(Exception exception)
+        {
+            MessageBox.Show(
+                    $"Something went wrong!\n\n" +
+                    $"If this happens repeatedly, please tell OhRudi (the Creator) by commenting on the download page.\n\n" +
+                    $"Error Message: {exception.Message}\n\n" +
+                    $"Path: {lastPath}", "Uuupsi ...", MessageBoxButtons.OK, MessageBoxIcon.Error
+                );
+        }
+
+
+        /**
+         * show stop message box
+         */
+        private void showStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        {
+            string message = $"Process Stopped.";
+            int progressMinusSkipped = progressTillStopped - S3PR.S3PR.SkippedFilesCounter;
+            if (progressMinusSkipped < 0) progressMinusSkipped = 0;
+            if (progressMinusSkipped > 0)
+            {
+                if (fileSizeBeforeInByte - fileSizeAfterInByte <= 0)
+                {
+                    message += $"\n\nBefore it stopped, it checked {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} but, {(progressMinusSkipped > 1 ? "they were" : "it was")} already reduced, so nothing changed.";
+                }
+                else
+                {
+                    message += $"\n\nBefore it stopped, it reduced {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {convertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
+                }
+            }
+            message += $"\n\nLast processed File: {lastPath}";
+            if (S3PR.S3PR.SkippedFilesCounter > 0)
+            {
+                message += $"\n\nSkipped {S3PR.S3PR.SkippedFilesCounter} File{(S3PR.S3PR.SkippedFilesCounter > 1 ? "s" : "")} cause the program had no access.";
+            }
+
+            MessageBox.Show(
+                message,
+                "Oh, you stopped?",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+        }
+
+
+        /**
+         * show success message box
+         */
+        private void showSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        {
+            string message = $"Done.";
+            int progressMinusSkipped = progressTillStopped - S3PR.S3PR.SkippedFilesCounter;
+            if (progressMinusSkipped < 0) progressMinusSkipped = 0;
+            if (progressMinusSkipped > 0)
+            {
+                if ((fileSizeBeforeInByte - fileSizeAfterInByte) <= 0)
+                {
+                    message += $"\n\nIt checked {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} but, {(progressMinusSkipped != 1 ? "they were" : "it was")} already reduced, so nothing changed.";
+                }
+                else
+                {
+                    message += $"\n\nReduced {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {convertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
+                }
+            }
+            if (S3PR.S3PR.SkippedFilesCounter > 0)
+            {
+                message += $"\n\nSkipped {S3PR.S3PR.SkippedFilesCounter} File{(S3PR.S3PR.SkippedFilesCounter > 1 ? "s" : "")} cause the program had no access.";
+            }
+
+            MessageBox.Show(message,
+                "Wuhuuu, it's done!",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
+
+
+        /**
+         * reset skipped files counter
+         */
+        private void resetSkippedFilesCounter()
+        {
+            S3PR.S3PR.SkippedFilesCounter = 0;
         }
 
 
@@ -269,6 +338,9 @@ namespace S3PR_GUI
         }
 
 
+        /**
+         * update loading label
+         */
         private void updateLoadingLabel(string text)
         {
             if (label1.InvokeRequired) label1.Invoke(new Action(() => { label1.Text = text; }));
@@ -355,7 +427,7 @@ namespace S3PR_GUI
 
             using (Process process = Process.Start(psi))
             {
-                process.WaitForExit();
+                process?.WaitForExit();
             }
         }
 

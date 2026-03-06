@@ -16,6 +16,8 @@ namespace S3PR
         public static bool RemoveThumbnail { private get; set; }
         public static bool RemoveIcon { private get; set; }
 
+        public static int SkippedFilesCounter { get; set; } = 0;
+
         static void Main(string[] args)
         {
             if (args.Length == 0)
@@ -34,53 +36,36 @@ namespace S3PR
         {
             try
             {
-                bool flag = false;
-
                 List<Package> mergeablePackages = new List<Package>(0);
                 foreach (string path in args)
                 {
-                    try
+                    if (File.Exists(path))
                     {
-                        if (File.Exists(path))
+                        if (path.EndsWith(".package", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (path.EndsWith(".package", StringComparison.OrdinalIgnoreCase))
+                            try
                             {
-                                try
-                                {
-                                    mergeablePackages.Add(Package.Load(path));
-                                }
-                                catch (Exception)
-                                {
-                                    throw new Exception("Failed while loading package: " + path);
-                                }
+                                mergeablePackages.Add(Package.Load(path));
+                            }
+                            catch (Exception)
+                            {
+                                SkippedFilesCounter++;
                             }
                         }
-                        else if (Directory.Exists(path))
-                        {
-                            string[] newArgs = (from file in Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                                                where file.EndsWith(".package", StringComparison.OrdinalIgnoreCase)
-                                                select file).ToArray<string>();
-                            ReducePackages(newArgs);
-                            flag = true;
-                        }
-                        else
-                        {
-                            throw new Exception("File/directory does not exist");
-                        }
                     }
-                    catch (Exception ex)
+                    else if (Directory.Exists(path))
                     {
-                        throw new Exception(ex.Message);
+                        string[] newArgs = (from file in Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
+                                            where file.EndsWith(".package", StringComparison.OrdinalIgnoreCase)
+                                            select file).ToArray<string>();
+                        ReducePackages(newArgs);
+                    }
+                    else
+                    {
+                        throw new Exception("File/directory does not exist");
                     }
                 }
-                if (mergeablePackages.Count == 0)
-                {
-                    if (!flag)
-                    {
-                        throw new Exception("No Package-Files to reduce");
-                    }
-                }
-                else
+                if (mergeablePackages.Count > 0)
                 {
                     Console.WriteLine($"Reducing {mergeablePackages.Count} packages");
                     Package.RemoveThumAndIconResourcesFromPackage(mergeablePackages, S3PR.RemoveThumbnail, S3PR.RemoveIcon);
