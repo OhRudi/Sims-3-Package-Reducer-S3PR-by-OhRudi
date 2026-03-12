@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Text;
 
 namespace OhRudi
 {
-    class S3RC
+    public class S3RC
     {
         private string exePath;
 
@@ -35,11 +36,11 @@ namespace OhRudi
             string tempPath = Path.Combine(Path.GetTempPath(), $"s3rc_{Guid.NewGuid()}.exe");
 
             var assembly = Assembly.GetExecutingAssembly();
-            string resourceName = "S3PR_GUI.s3rc.exe";
+            string resourceName = "S3PR.s3rc.exe";
 
             using (Stream resource = assembly.GetManifestResourceStream(resourceName))
             {
-                if (resource == null) throw new Exception("Embedded tool not found.");
+                if (resource == null)   throw new Exception("Embedded tool not found.");
 
                 using (FileStream file = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
                 {

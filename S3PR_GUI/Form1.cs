@@ -5,13 +5,13 @@ namespace OhRudi
 {
     public partial class Form1 : Form
     {
-
+        public string a = "";
         private bool stopExecution = false;
         private string lastPath = "";
         private bool isDone = false;
         private string defaultWindowTitle = "Sims 3 Package Reducer (S3PR) by OhRudi";
-        S3RC S3RC = S3RC.GetInstance;
-        S3PR S3PR = S3PR.GetInstance;
+        private S3RC S3RC = S3RC.GetInstance;
+        private S3PR S3PR = S3PR.GetInstance;
 
         public Form1()
         {
@@ -64,7 +64,7 @@ namespace OhRudi
 
 
         /**
-         * on reduce button click
+         * on edit button click
          */
         private async void button2_Click(object sender, EventArgs e)
         {
@@ -100,10 +100,10 @@ namespace OhRudi
                 // disable all UI input elements, to signalize it's not available
                 DisableEnableAllUIInputElements(false);
 
-                // switch reduce button to stop button
-                SwitchBetweenReduceAndStopButton();
+                // switch edit button to stop button
+                SwitchBetweenEditAndStopButton();
 
-                // execute reduce async
+                // execute edit async
                 await Task.Run(() =>
                 {
                     ExecuteFileEdit();
@@ -118,8 +118,8 @@ namespace OhRudi
                 // enable all UI input elements, to signalize it's available
                 DisableEnableAllUIInputElements(true);
 
-                // reset the stop/reduce button
-                SwitchBetweenReduceAndStopButton();
+                // reset the stop/edit button
+                SwitchBetweenEditAndStopButton();
 
                 // reset stop execution flag
                 stopExecution = false;
@@ -127,11 +127,11 @@ namespace OhRudi
                 // reset is done flag
                 isDone = false;
 
-                // reset skipped files counter
-                S3PR.ResetSkippedFilesCounter();
+                // reset skipped files
+                S3PR.ResetSkippedFiles();
 
-                // reset skipped folders counter
-                S3PR.ResetSkippedFoldersCounter();
+                // reset skipped folders
+                S3PR.ResetSkippedFolders();
             }
             else
             {
@@ -148,7 +148,7 @@ namespace OhRudi
 
 
         /**
-         * the main method, that iterates through all files and reduces them
+         * the main method, that iterates through all files and edits them
          */
         private void ExecuteFileEdit()
         {
@@ -182,10 +182,10 @@ namespace OhRudi
                 pathEnumerable = S3PR.FindPackageFiles(pathFolderList, searchRecursive);
                 int count = pathEnumerable.Count();
 
-                // reduce each file seperately
+                // edit each file seperately
                 foreach (string pathFile in pathEnumerable)
                 {
-                    UpdateLoadingLabel($"Reducing {Path.GetFileName(pathFile)} ...");
+                    UpdateLoadingLabel($"Editing {Path.GetFileName(pathFile)} ...");
                     if (!stopExecution)
                     {
                         progressTillStopped++;
@@ -198,6 +198,12 @@ namespace OhRudi
                     }
                     int progressBarPercentValue = (++progress * 100) / count;
                     UpdateProgressBar(progressBarPercentValue < 2 ? 2 : progressBarPercentValue);
+                }
+
+                if(progressTillStopped <= 0)
+                {
+                    ShowWarningNoFilesFoundMessageBox();
+                    return;
                 }
             }
             catch (Exception exception)
@@ -216,13 +222,13 @@ namespace OhRudi
             // if process got stopped via UI-Button
             if (stopExecution)
             {
-                ShowStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
+                ShowStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte, decompressFile);
             }
 
             // if process ran sucessfully
             else
             {
-                ShowSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
+                ShowSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte, decompressFile);
             }
         }
 
@@ -245,27 +251,37 @@ namespace OhRudi
         }
 
 
+        private void ShowWarningNoFilesFoundMessageBox()
+        {
+            MessageBox.Show($"The selected Folders did not contain any Package-Files or the program does not have access.\nPlease select another one.", "Nothing here ...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+
         /**
          * show stop message box
          */
-        private void ShowStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        private void ShowStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte, bool decompressionEnabled = false)
         {
             string message = $"Process Stopped.";
-            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFilesCounter;
+            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFiles.Count;
             if (progressMinusSkipped < 0) progressMinusSkipped = 0;
             if (progressMinusSkipped > 0)
             {
-                if (fileSizeBeforeInByte - fileSizeAfterInByte <= 0)
-                {
-                    message += $"\n\nBefore it stopped, it checked {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} but, {(progressMinusSkipped > 1 ? "they were" : "it was")} already reduced, so nothing changed.";
-                }
-                else
+                if (fileSizeBeforeInByte - fileSizeAfterInByte > 0)
                 {
                     message += $"\n\nBefore it stopped, it reduced {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
                 }
+                else if (decompressionEnabled && (fileSizeBeforeInByte - fileSizeAfterInByte) != 0)
+                {
+                    message += $"\n\nBefore it stopped, it decompressed {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeAfterInByte - fileSizeBeforeInByte)}";
+                }
+                else
+                {
+                    message += $"\n\nBefore it stopped, it checked {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} but, {(progressMinusSkipped > 1 ? "they were" : "it was")} already edited{(decompressionEnabled ? " and decompressed" : "")}, so nothing changed.";
+                }
             }
             message += $"\n\nLast processed File: {lastPath}";
-            message += GetSkippedFilesAndFoldersMessage();
+            message += S3PR.GetSkippedFilesAndFoldersMessage();
 
             MessageBox.Show(
                 message,
@@ -279,47 +295,33 @@ namespace OhRudi
         /**
          * show success message box
          */
-        private void ShowSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        private void ShowSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte, bool decompressionEnabled = false)
         {
             string message = $"Done.";
-            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFilesCounter;
-            if (progressMinusSkipped < 0) progressMinusSkipped = 0;
+            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFiles.Count;
+
             if (progressMinusSkipped > 0)
             {
-                if ((fileSizeBeforeInByte - fileSizeAfterInByte) <= 0)
-                {
-                    message += $"\n\nIt checked {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} but, {(progressMinusSkipped != 1 ? "they were" : "it was")} already reduced, so nothing changed.";
-                }
-                else
+                if ((fileSizeBeforeInByte - fileSizeAfterInByte) > 0)
                 {
                     message += $"\n\nReduced {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
                 }
+                else if (decompressionEnabled && (fileSizeBeforeInByte - fileSizeAfterInByte) != 0)
+                {
+                    message += $"\n\nDecompressed {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeAfterInByte - fileSizeBeforeInByte)}";
+                }
+                else
+                {
+                    message += $"\n\nIt checked {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} but, {(progressMinusSkipped != 1 ? "they were" : "it was")} already edited{(decompressionEnabled ? " and decompressed" : "")}, so nothing changed.";
+                }
             }
-            message += GetSkippedFilesAndFoldersMessage();
+            message += S3PR.GetSkippedFilesAndFoldersMessage();
 
             MessageBox.Show(message,
                 "Wuhuuu, it's done!",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
-        }
-
-
-        /**
-         * get message for skipped files and folders
-         */
-        private string GetSkippedFilesAndFoldersMessage()
-        {
-            string message = "";
-            if (S3PR.SkippedFilesCounter > 0 || S3PR.SkippedFoldersCounter > 0)
-            {
-                message += $"\n\nSkipped ";
-                if (S3PR.SkippedFilesCounter > 0) message += $"{S3PR.SkippedFilesCounter} File{(S3PR.SkippedFilesCounter > 1 ? "s" : "")} ";
-                if (S3PR.SkippedFilesCounter > 0 && S3PR.SkippedFoldersCounter > 0) message += "and ";
-                if (S3PR.SkippedFoldersCounter > 0) message += $"{S3PR.SkippedFoldersCounter} Folder{(S3PR.SkippedFoldersCounter > 1 ? "s" : "")} ";
-                message += "cause the program had no access.";
-            }
-            return message;
         }
 
 
@@ -344,7 +346,7 @@ namespace OhRudi
 
 
         /**
-         * switch between "Reduce" and "Stop" text on the execution button
+         * switch between normal and waiting cursor
          */
         private void SwitchBetweenNormalAndWaitingCursor()
         {
@@ -353,12 +355,12 @@ namespace OhRudi
 
 
         /**
-         * switch between "Reduce" and "Stop" text on the execution button
+         * switch between "Edit" and "Stop" text on the execution button
          */
-        private void SwitchBetweenReduceAndStopButton()
+        private void SwitchBetweenEditAndStopButton()
         {
-            if (button2.InvokeRequired) button2.Invoke(new Action(() => { button2.Text = button2.Text != "Stop" ? "Stop" : "Reduce"; }));
-            else button2.Text = button2.Text != "Stop" ? "Stop" : "Reduce";
+            if (button2.InvokeRequired) button2.Invoke(new Action(() => { button2.Text = button2.Text != "Stop" ? "Stop" : "Edit"; }));
+            else button2.Text = button2.Text != "Stop" ? "Stop" : "Edit";
         }
 
 
@@ -423,7 +425,7 @@ namespace OhRudi
         private bool ShowMessageDecompress()
         {
             return MessageBox.Show(
-                $"Decompressing your Package-Files a lot more space. But it will be worthwhile.\n\n" +
+                $"Decompressing your Package-Files means they take up 3-times the space.\nBut it will be worthwhile.\nRead the notes on the download page if you need more information on that\n\n" +
                 $"Is that okay?",
                 "Decompressing takes up more space ...",
                 MessageBoxButtons.OKCancel,
@@ -447,13 +449,13 @@ namespace OhRudi
 
 
         /**
-         * show message, to warn user, that reducing the Package-Files is permanent
+         * show message, to warn user, that editing the Package-Files is permanent
          */
         private bool ShowMessageBackupWarning()
         {
             if (!checkBox5.Checked) return true;
             return MessageBox.Show(
-                $"Reducing your Package-Files is a one way process.\n\n" +
+                $"Editing your Package-Files is a one way process.\n\n" +
                 $"Do You have a backup, just in case?",
                 "Please read this <3",
                 MessageBoxButtons.YesNo,

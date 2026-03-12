@@ -185,7 +185,7 @@
             groupBox3.Size = new Size(1137, 128);
             groupBox3.TabIndex = 3;
             groupBox3.TabStop = false;
-            groupBox3.Text = "Step 3: Click Reduce";
+            groupBox3.Text = "Step 3: Click Edit";
             // 
             // label1
             // 
@@ -211,7 +211,7 @@
             button2.Name = "button2";
             button2.Size = new Size(150, 47);
             button2.TabIndex = 1;
-            button2.Text = "Reduce";
+            button2.Text = "Edit";
             button2.UseVisualStyleBackColor = true;
             button2.Click += button2_Click;
             // 

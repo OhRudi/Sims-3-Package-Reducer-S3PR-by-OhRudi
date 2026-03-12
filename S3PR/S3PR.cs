@@ -3,21 +3,23 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using OhRudi;
 
 namespace OhRudi
 {
     public class S3PR
     {
 
-        public bool RemoveThumbnail { private get; set; } = false;
-        public bool RemoveIcon { private get; set; } = false;
+        private bool RemoveThumbnail { get; set; } = false;
+        private bool RemoveIcon { get; set; } = false;
+        private bool CompressFile { get; set; } = false;
+        private bool DecompressFile { get; set; } = false;
+        private bool SearchRecursive { get; set; } = false;
+        public List<string> SkippedFiles { get; private set; } = [];
 
-        public bool SearchRecursive { private get; set; } = false;
+        public List<string> SkippedFolders { get; private set; } = [];
 
-        public int SkippedFilesCounter { get; private set; } = 0;
-
-        public int SkippedFoldersCounter { get; private set; } = 0;
-
+        private S3RC S3RC = S3RC.GetInstance;
         private static S3PR Instance { get; set; }
 
         public static S3PR GetInstance {
@@ -41,10 +43,15 @@ namespace OhRudi
                 {
                     IEnumerable<string> pathEnumerable = S3PR.GetInstance.FindPackageFiles(args, S3PR.GetInstance.SearchRecursive);
                     if (pathEnumerable.Count() <= 0) throw new Exception("The selected folder{(listPaths.Length > 1 ? \"s do\" : \" does\")} not contain any Package-Files. Please select another folder.");
-                    Console.WriteLine($"Reducing {pathEnumerable.Count()} packages");
+                    Console.WriteLine($"Editing {pathEnumerable.Count()} packages");
                     foreach (string path in pathEnumerable)
-                        GetInstance.EditPackage(path, GetInstance.RemoveThumbnail, GetInstance.RemoveIcon);
-                    Console.WriteLine($"Done reducing");
+                    {
+                        if (GetInstance.RemoveIcon || GetInstance.RemoveThumbnail) GetInstance.EditPackage(path, GetInstance.RemoveThumbnail, GetInstance.RemoveIcon);
+                        if (GetInstance.CompressFile) GetInstance.S3RC.Compress(path);
+                        if (GetInstance.DecompressFile) GetInstance.S3RC.Decompress(path);
+                    }
+                    Console.WriteLine(GetInstance.GetSkippedFilesAndFoldersMessage());
+                    Console.WriteLine($"Done.");
                 }
                 catch (Exception exception) {
                     Console.WriteLine(exception.Message);
@@ -87,8 +94,8 @@ namespace OhRudi
                 {
                     IEnumerable<string> files = Array.Empty<string>();
 
-                    try { files = Directory.EnumerateFiles(path, "*.package", options); if (files.Count() <= 0) throw new Exception(); }
-                    catch (Exception) { SkippedFoldersCounter++; continue; }
+                    try { files = Directory.EnumerateFiles(path, "*.package", options); }
+                    catch (Exception) { SkippedFolders.Add(path); continue; }
 
                     foreach (var file in files)
                         yield return file;
@@ -104,7 +111,7 @@ namespace OhRudi
         {
             Package importPackage = null;
             try { importPackage = Package.Load(path); }
-            catch { SkippedFilesCounter++; return; }
+            catch { SkippedFiles.Add(path); return; }
             String tempPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".temp" + Path.GetExtension(path));
             FileStream stream = null;
             BinaryWriter writer = null;
@@ -186,18 +193,56 @@ namespace OhRudi
         /**
          * reset skipped files counter
          */
-        public void ResetSkippedFilesCounter()
+        public void ResetSkippedFiles()
         {
-            SkippedFilesCounter = 0;
+            SkippedFiles = [];
         }
 
 
         /**
          * reset skipped folders counter
          */
-        public void ResetSkippedFoldersCounter()
+        public void ResetSkippedFolders()
         {
-            SkippedFoldersCounter = 0;
+            SkippedFolders = [];
+        }
+
+
+        public void RemoveDuplicatesInSkippedFilesAndFolders()
+        {
+            SkippedFiles = SkippedFiles.Distinct().ToList();
+            SkippedFolders = SkippedFolders.Distinct().ToList();
+        }
+
+
+        /**
+         * get message for skipped files and folders
+         */
+        public string GetSkippedFilesAndFoldersMessage()
+        {
+            RemoveDuplicatesInSkippedFilesAndFolders();
+            string message = "";
+            if (SkippedFiles.Count > 0 || SkippedFolders.Count > 0)
+            {
+                message += $"\n\nSkipped ";
+                if (SkippedFiles.Count > 0) message += $"{SkippedFiles.Count} File{(SkippedFiles.Count > 1 ? "s" : "")} ";
+                if (SkippedFiles.Count > 0 && SkippedFolders.Count > 0) message += "and ";
+                if (SkippedFolders.Count > 0) message += $"{SkippedFolders.Count} Folder{(SkippedFolders.Count > 1 ? "s" : "")} ";
+                message += "cause the program had no access.\n";
+                if (SkippedFiles.Count > 0)
+                {
+                    message += "\n## SKIPPED FILES ##\n";
+                    foreach (string skippedFile in SkippedFiles)
+                        message += $"{Path.GetFileName(skippedFile)}\n";
+                }
+                if (SkippedFolders.Count > 0)
+                {
+                    message += "\n## SKIPPED FOLDERS ##\n";
+                    foreach (string skippedFolder in SkippedFolders)
+                        message += $"{Path.GetFileName(skippedFolder)}\n";
+                }
+            }
+            return message;
         }
     }
 }
