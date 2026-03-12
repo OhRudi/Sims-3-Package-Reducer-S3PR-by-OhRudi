@@ -11,7 +11,10 @@ Software to easily reduce and compress Package-Files
 - Works only for Windows (did test for Windows 10 & 11), not for Mac, did not test on Linux
 
 ## How to compile
+**Compile UI Application**
 ```powershell
+# within S3PR project root
+
 # pull tags from github
 git pull origin main --tags --force
 
@@ -23,6 +26,12 @@ $versionNumber = (git tag --sort=-v:refname | Select-Object -First 1) -replace '
 # this version number is then displayed in the UI
 # the compiled exe is under: S3PR_GUI\bin\Release\net10.0-windows\win-x64\publish
 dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:AssemblyVersion="$versionNumber" /p:Version="$versionNumber" /p:FileVersion="$versionNumber" /p:InformationalVersion="$versionNumber"
+```
+
+**Compile Console Application**
+```
+# within "S3PR" subfolder
+dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 ```
 
 ## Further Explenations
