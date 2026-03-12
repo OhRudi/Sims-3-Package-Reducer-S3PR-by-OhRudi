@@ -20,7 +20,7 @@ namespace s3molib
 
         public uint IndexLength { get; private set; }
 
-        public uint IndexPosition { get; private set; }
+        public uint IndexPosition { get; set; }
 
         public void SetIndexPosition(uint position)
         {
@@ -171,75 +171,6 @@ namespace s3molib
             return package;
         }
 
-
-        public static void RemoveThumAndIconResourcesFromPackage(IEnumerable<Package> source, bool removeThumbnails=true, bool removeIcons=true)
-        {
-            for (int i = 0; i < source.Count<Package>(); i++)
-            {
-                Package importPackage = source.ElementAt(i);
-                String originalPath = importPackage.FilePath;
-                String tempPath = Path.Combine(Path.GetDirectoryName(originalPath), Path.GetFileNameWithoutExtension(originalPath) + ".temp" + Path.GetExtension(originalPath));
-                try {
-                    Package package = Package.New(tempPath);
-                    FileStream stream = new FileStream(tempPath, FileMode.Open, FileAccess.Write, FileShare.Read);
-                    BinaryWriter w = new BinaryWriter(stream);
-                    stream.Position = (long)((ulong)package.IndexPosition);
-                    foreach (ResourceEntry re in importPackage.ResourceEntries)
-                    {
-                        if (!(Helper.THUMResources.Contains(re.Type) && removeThumbnails == true) && !(Helper.ICONResources.Contains(re.Type) && removeIcons == true))
-                        {
-                            byte[] data = importPackage.GetRawData(re);
-                            if (data == null)
-                            {
-                                throw new Exception("Unable to obtain data from " + Path.GetFileName(importPackage.FilePath));
-                            }
-                            package._resourceEntries.Add(new ResourceEntry(importPackage, re.Type, re.Group, re.ID1, re.ID2, (uint)stream.Position, re.FileSize, re.MemSize, re.Compressed, re.Unknown2));
-                            w.Write(data, 0, (int)re.FileSize);
-                       }
-                    }
-                    package.IndexPosition = (uint)stream.Position;
-                    package.WriteIndex(w);
-                    package.WriteHeader(stream, w);
-                    w.Close();
-                    stream.Close();
-
-                    if (File.Exists(originalPath))
-                    {
-                        try
-                        {
-                            FileAttributes attrs = File.GetAttributes(originalPath);
-                            if ((attrs & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
-                            {
-                                File.SetAttributes(originalPath, attrs & ~FileAttributes.ReadOnly);
-                            }
-                        }
-                        catch { }
-
-                        File.Delete(originalPath);
-                    }
-
-                    File.Move(tempPath, originalPath);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // Skip files without permission
-                    continue;
-                }
-                catch (IOException)
-                {
-                    // Skip files that cannot be accessed or replaced
-                    continue;
-                }
-                finally
-                {
-                    // Remove temp files, if they still are there, just in case
-                    if (File.Exists(tempPath))
-                    {
-                        File.Delete(tempPath);
-                    }
-                }
-            }
-        }
 
         public static bool Merge(string directoryPath, string mergeName, IEnumerable<Package> source, uint fileSizeLimit = 1000000000U, Action<int> progress = null)
         {
@@ -429,6 +360,6 @@ namespace s3molib
 
         private const uint IndexVersion = 3U;
 
-        private List<ResourceEntry> _resourceEntries = new List<ResourceEntry>();
+        public List<ResourceEntry> _resourceEntries = new List<ResourceEntry>();
     }
 }

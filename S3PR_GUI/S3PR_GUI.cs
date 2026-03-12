@@ -1,5 +1,4 @@
-using S3PR;
-namespace S3PR_GUI
+namespace OhRudi
 {
     internal static class Program
     {

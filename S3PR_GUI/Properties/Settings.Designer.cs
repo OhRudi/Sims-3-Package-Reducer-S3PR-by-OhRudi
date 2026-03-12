@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace S3PR_GUI.Properties {
+namespace OhRudi.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
@@ -97,13 +97,37 @@ namespace S3PR_GUI.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool checkBox5 {
             get {
                 return ((bool)(this["checkBox5"]));
             }
             set {
                 this["checkBox5"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool checkBox6 {
+            get {
+                return ((bool)(this["checkBox6"]));
+            }
+            set {
+                this["checkBox6"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool decompressWarningShown {
+            get {
+                return ((bool)(this["decompressWarningShown"]));
+            }
+            set {
+                this["decompressWarningShown"] = value;
             }
         }
     }
