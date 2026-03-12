@@ -1,9 +1,11 @@
-﻿using s3molib;
+﻿using OhRudi;
+using s3molib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using OhRudi;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace OhRudi
 {
@@ -39,14 +41,58 @@ namespace OhRudi
             }
             else
             {
+                List<string> paths = new List<string>();
+                foreach (var arg in args)
+                {
+                    if (arg.StartsWith("-"))
+                    {
+                        switch (arg)
+                        {
+                            case "-r":
+                            case "--search-recursive":
+                                GetInstance.SearchRecursive = true;
+                                Console.WriteLine("Setting: Search in subfolders for Package-Files");
+                                break;
+                            case "-t":
+                            case "--remove-thumbnail":
+                                GetInstance.RemoveThumbnail = true;
+                                Console.WriteLine("Setting: Remove thumbnail resources");
+                                break;
+                            case "-i":
+                            case "--remove-icon": 
+                                GetInstance.RemoveIcon = true;
+                                Console.WriteLine("Setting: Remove icon resources");
+                                break;
+                            case "-c":
+                            case "--compress-file":
+                                GetInstance.CompressFile = true;
+                                Console.WriteLine("Setting: Compress Package-Files");
+                                break;
+                            case "-d":
+                            case "--decompress-file":
+                                if (GetInstance.CompressFile) continue;
+                                GetInstance.DecompressFile = true;
+                                Console.WriteLine("Setting: Decompress Package-Files");
+                                break;
+                            case "-h":
+                            case "--help":
+                                Console.WriteLine($"Usage:\r\nS3PR.exe [options] <paths to folders or files...>\r\n\r\nOptions:\r\n-r, --search-recursive     Search directories recursively when looking for Package-Files.\r\n\r\n-t, --remove-thumbnail     Remove thumbnail resources from Package-Files.\r\n\r\n-i, --remove-icon          Remove icon resources from Package-Files.\r\n\r\n-c, --compress-file        Compress Package-Files.\r\n\r\n-d, --decompress-file      Decompress Package-Files.\r\n\r\n-h, --help                 Show this help message and exit.\r\n\r\nArguments:\r\n<paths...>                 One or more files or folders to process.\r\n");
+                                return;
+                        }
+                    }
+                    else
+                    {
+                        paths.Add(arg);
+                    }
+                }
                 try
                 {
-                    IEnumerable<string> pathEnumerable = S3PR.GetInstance.FindPackageFiles(args, S3PR.GetInstance.SearchRecursive);
-                    if (pathEnumerable.Count() <= 0) throw new Exception("The selected folder{(listPaths.Length > 1 ? \"s do\" : \" does\")} not contain any Package-Files. Please select another folder.");
+                    IEnumerable<string> pathEnumerable = S3PR.GetInstance.FindPackageFiles(paths.ToArray(), S3PR.GetInstance.SearchRecursive);
+                    if (pathEnumerable.Count() <= 0) throw new Exception($"The selected folder{(pathEnumerable.Count() > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.");
                     Console.WriteLine($"Editing {pathEnumerable.Count()} packages");
                     foreach (string path in pathEnumerable)
                     {
-                        if (GetInstance.RemoveIcon || GetInstance.RemoveThumbnail) GetInstance.EditPackage(path, GetInstance.RemoveThumbnail, GetInstance.RemoveIcon);
+                        GetInstance.EditPackage(path, GetInstance.RemoveThumbnail, GetInstance.RemoveIcon);
                         if (GetInstance.CompressFile) GetInstance.S3RC.Compress(path);
                         if (GetInstance.DecompressFile) GetInstance.S3RC.Decompress(path);
                     }

@@ -191,7 +191,7 @@ namespace OhRudi
                         progressTillStopped++;
                         lastPath = pathFile;
                         fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
-                        if (removeThumbnails || removeIcons) S3PR.EditPackage(pathFile, removeThumbnails, removeIcons);
+                        S3PR.EditPackage(pathFile, removeThumbnails, removeIcons);
                         if (compressFile) S3RC.Compress(pathFile);
                         if (decompressFile) S3RC.Decompress(pathFile);
                         fileSizeAfterInByte += (double)(new FileInfo(pathFile)).Length;
