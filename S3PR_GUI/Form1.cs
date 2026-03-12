@@ -1,17 +1,7 @@
-using System.Collections;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.IO;
 using System.Reflection;
-using System.Windows.Forms.VisualStyles;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 
-namespace S3PR_GUI
+namespace OhRudi
 {
     public partial class Form1 : Form
     {
@@ -20,6 +10,8 @@ namespace S3PR_GUI
         private string lastPath = "";
         private bool isDone = false;
         private string defaultWindowTitle = "Sims 3 Package Reducer (S3PR) by OhRudi";
+        S3RC S3RC = S3RC.GetInstance;
+        S3PR S3PR = S3PR.GetInstance;
 
         public Form1()
         {
@@ -34,7 +26,7 @@ namespace S3PR_GUI
             // set window title by assembly title and assembly version
             Text = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? defaultWindowTitle;
             Text = $"{Text} Version {Assembly.GetEntryAssembly()?.GetName().Version?.ToString()}";
-            
+
             // set icon (cause any other did not work)
             this.Icon = Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
             string path_default;
@@ -45,6 +37,7 @@ namespace S3PR_GUI
             checkBox3.Checked = Properties.Settings.Default.checkBox3;
             checkBox4.Checked = Properties.Settings.Default.checkBox4;
             checkBox5.Checked = Properties.Settings.Default.checkBox5;
+            checkBox6.Checked = Properties.Settings.Default.checkBox6;
             textBox1.Text = Properties.Settings.Default.textBox1;
 
             // set default path to mods folder
@@ -77,49 +70,56 @@ namespace S3PR_GUI
         {
             if (button2.Text != "Stop" && !stopExecution)
             {
+                // if both compress and decompress are checked at the same time, show warning message and abort
+                if (checkBox4.Checked && checkBox6.Checked)
+                {
+                    ShowMessageCompressAndDecompressCantBeActiveAtTheSameTime();
+                    return;
+                }
+
                 // reset loading label beneath the loading bar
-                updateLoadingLabel("");
+                UpdateLoadingLabel("");
 
                 // save all Values from the UI Elements to the user default values
-                saveUserDefaultValues();
+                SaveUserDefaultValues();
 
                 // show message to warn user to have a backup, just in case
                 // abort if the user dialog was negative
-                if (!showMessageBackupWarning()) return;
+                if (!ShowMessageBackupWarning()) return;
 
                 // set cursor to waiting 
-                switchBetweenNormalAndWaitingCursor();
+                SwitchBetweenNormalAndWaitingCursor();
 
                 // set progress bar to 2% at start, to signalise it started
                 await Task.Run(() =>
                 {
-                    updateProgressBar(2);
+                    UpdateProgressBar(2);
                 });
 
 
                 // disable all UI input elements, to signalize it's not available
-                disableEnableAllUIInputElements(false);
+                DisableEnableAllUIInputElements(false);
 
                 // switch reduce button to stop button
-                switchBetweenReduceAndStopButton();
+                SwitchBetweenReduceAndStopButton();
 
                 // execute reduce async
                 await Task.Run(() =>
                 {
-                    executeReduce();
+                    ExecuteFileEdit();
                 });
 
                 // reset progress bar
-                updateProgressBar(0);
+                UpdateProgressBar(0);
 
                 // reset cursor
-                switchBetweenNormalAndWaitingCursor();
+                SwitchBetweenNormalAndWaitingCursor();
 
                 // enable all UI input elements, to signalize it's available
-                disableEnableAllUIInputElements(true);
+                DisableEnableAllUIInputElements(true);
 
                 // reset the stop/reduce button
-                switchBetweenReduceAndStopButton();
+                SwitchBetweenReduceAndStopButton();
 
                 // reset stop execution flag
                 stopExecution = false;
@@ -128,7 +128,10 @@ namespace S3PR_GUI
                 isDone = false;
 
                 // reset skipped files counter
-                resetSkippedFilesCounter();
+                S3PR.ResetSkippedFilesCounter();
+
+                // reset skipped folders counter
+                S3PR.ResetSkippedFoldersCounter();
             }
             else
             {
@@ -138,7 +141,7 @@ namespace S3PR_GUI
                 // update loading label
                 if (!isDone)
                 {
-                    updateLoadingLabel($"Stops after finishing: {Path.GetFileName(lastPath)} ...");
+                    UpdateLoadingLabel($"Stops after finishing: {Path.GetFileName(lastPath)} ...");
                 }
             }
         }
@@ -147,94 +150,79 @@ namespace S3PR_GUI
         /**
          * the main method, that iterates through all files and reduces them
          */
-        private void executeReduce()
+        private void ExecuteFileEdit()
         {
             bool removeThumbnails = checkBox1.Checked;
             bool removeIcons = checkBox2.Checked;
             bool searchRecursive = checkBox3.Checked;
             bool compressFile = checkBox4.Checked;
+            bool decompressFile = checkBox6.Checked;
             string[] pathFolderList = textBox1.Text.Split(", ");
-            List<string> pathFileList = new List<string>();
+            IEnumerable<string> pathEnumerable;
             int progress = 0;
             int progressTillStopped = 0;
             double fileSizeBeforeInByte = 0;
             double fileSizeAfterInByte = 0;
-            string pathS3RC = ExtractS3RC();
 
             if (pathFolderList.Length <= 0)
             {
-                MessageBox.Show("Please select folders with Package-Files first.", "No Folders found.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select folders with Package-Files first.", "You missed something ...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (removeIcons == false && removeThumbnails == false && compressFile == false)
+            if (!removeIcons && !removeThumbnails && !compressFile && !decompressFile)
             {
-                MessageBox.Show($"Please click at least one of the options (like \"{checkBox1.Text}\", \"{checkBox2.Text}\", etc.) to edit the Package-Files.", "What to do? You missed something", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show($"Please click at least one of the options (like \"{checkBox1.Text}\", \"{checkBox2.Text}\", etc.) to edit the Package-Files.", "What to do? You missed something ...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
                 // find all package files in all folders
-                foreach (string pathFolder in pathFolderList)
-                {
-                    lastPath = pathFolder;
-                    if (!Path.Exists(pathFolder)) throw new Exception("This Folder does not exist.");
-                    pathFileList = pathFileList.Concat(from file in Directory.GetFiles(pathFolder, "*.*", searchRecursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-                                                       where file.EndsWith(".package", StringComparison.OrdinalIgnoreCase)
-                                                       select file).ToList<string>();
-                }
-
-                // warn that no package files exist in the source folder
-                if (pathFileList.Count <= 0)
-                {
-                    MessageBox.Show($"The selected folder{(pathFolderList.Length > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.", "No Package Files found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                pathEnumerable = S3PR.FindPackageFiles(pathFolderList, searchRecursive);
+                int count = pathEnumerable.Count();
 
                 // reduce each file seperately
-                foreach (string pathFile in pathFileList)
+                foreach (string pathFile in pathEnumerable)
                 {
-                    updateLoadingLabel($"Reducing {Path.GetFileName(pathFile)} ...");
+                    UpdateLoadingLabel($"Reducing {Path.GetFileName(pathFile)} ...");
                     if (!stopExecution)
                     {
                         progressTillStopped++;
                         lastPath = pathFile;
                         fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
-                        S3PR.S3PR.RemoveThumbnail = removeThumbnails;
-                        S3PR.S3PR.RemoveIcon = removeIcons;
-                        S3PR.S3PR.ReducePackages([pathFile]);
-                        if (compressFile) S3RC(pathFile, pathS3RC);
+                        if (removeThumbnails || removeIcons) S3PR.EditPackage(pathFile, removeThumbnails, removeIcons);
+                        if (compressFile) S3RC.Compress(pathFile);
+                        if (decompressFile) S3RC.Decompress(pathFile);
                         fileSizeAfterInByte += (double)(new FileInfo(pathFile)).Length;
                     }
-                    int progressBarPercentValue = (++progress * 100) / pathFileList.Count;
-                    updateProgressBar(progressBarPercentValue < 2 ? 2 : progressBarPercentValue);
+                    int progressBarPercentValue = (++progress * 100) / count;
+                    UpdateProgressBar(progressBarPercentValue < 2 ? 2 : progressBarPercentValue);
                 }
             }
             catch (Exception exception)
             {
-                showErrorMessageBox(exception);
+                ShowErrorMessageBox(exception);
                 return;
             }
             finally
             {
                 isDone = true;
-                try { File.Delete(pathS3RC); }
-                catch { /* Do nothing */ }
-                updateLoadingLabel("Done.");
+                S3RC.DeleteTool();
+                UpdateLoadingLabel("Done.");
             }
 
 
             // if process got stopped via UI-Button
             if (stopExecution)
             {
-                showStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
+                ShowStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
             }
 
             // if process ran sucessfully
             else
             {
-                showSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
+                ShowSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
             }
         }
 
@@ -242,13 +230,17 @@ namespace S3PR_GUI
         /**
          * show error message box
          */
-        private void showErrorMessageBox(Exception exception)
+        private void ShowErrorMessageBox(Exception exception)
         {
             MessageBox.Show(
                     $"Something went wrong!\n\n" +
-                    $"If this happens repeatedly, please tell OhRudi (the Creator) by commenting on the download page.\n\n" +
                     $"Error Message: {exception.Message}\n\n" +
-                    $"Path: {lastPath}", "Uuupsi ...", MessageBoxButtons.OK, MessageBoxIcon.Error
+                    $"If this happens repeatedly, please tell OhRudi (the Creator) by commenting on the download page." +
+                    (
+                        lastPath != "" || (exception.Source is not null && exception.Source != "")
+                        ? $"\n\nPath : {(exception.Source ?? lastPath)}"
+                        : ""
+                    ), "Uuupsi ...", MessageBoxButtons.OK, MessageBoxIcon.Error
                 );
         }
 
@@ -256,10 +248,10 @@ namespace S3PR_GUI
         /**
          * show stop message box
          */
-        private void showStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        private void ShowStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
         {
             string message = $"Process Stopped.";
-            int progressMinusSkipped = progressTillStopped - S3PR.S3PR.SkippedFilesCounter;
+            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFilesCounter;
             if (progressMinusSkipped < 0) progressMinusSkipped = 0;
             if (progressMinusSkipped > 0)
             {
@@ -269,14 +261,11 @@ namespace S3PR_GUI
                 }
                 else
                 {
-                    message += $"\n\nBefore it stopped, it reduced {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {convertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
+                    message += $"\n\nBefore it stopped, it reduced {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
                 }
             }
             message += $"\n\nLast processed File: {lastPath}";
-            if (S3PR.S3PR.SkippedFilesCounter > 0)
-            {
-                message += $"\n\nSkipped {S3PR.S3PR.SkippedFilesCounter} File{(S3PR.S3PR.SkippedFilesCounter > 1 ? "s" : "")} cause the program had no access.";
-            }
+            message += GetSkippedFilesAndFoldersMessage();
 
             MessageBox.Show(
                 message,
@@ -290,10 +279,10 @@ namespace S3PR_GUI
         /**
          * show success message box
          */
-        private void showSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        private void ShowSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
         {
             string message = $"Done.";
-            int progressMinusSkipped = progressTillStopped - S3PR.S3PR.SkippedFilesCounter;
+            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFilesCounter;
             if (progressMinusSkipped < 0) progressMinusSkipped = 0;
             if (progressMinusSkipped > 0)
             {
@@ -303,13 +292,10 @@ namespace S3PR_GUI
                 }
                 else
                 {
-                    message += $"\n\nReduced {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {convertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
+                    message += $"\n\nReduced {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
                 }
             }
-            if (S3PR.S3PR.SkippedFilesCounter > 0)
-            {
-                message += $"\n\nSkipped {S3PR.S3PR.SkippedFilesCounter} File{(S3PR.S3PR.SkippedFilesCounter > 1 ? "s" : "")} cause the program had no access.";
-            }
+            message += GetSkippedFilesAndFoldersMessage();
 
             MessageBox.Show(message,
                 "Wuhuuu, it's done!",
@@ -320,18 +306,27 @@ namespace S3PR_GUI
 
 
         /**
-         * reset skipped files counter
+         * get message for skipped files and folders
          */
-        private void resetSkippedFilesCounter()
+        private string GetSkippedFilesAndFoldersMessage()
         {
-            S3PR.S3PR.SkippedFilesCounter = 0;
+            string message = "";
+            if (S3PR.SkippedFilesCounter > 0 || S3PR.SkippedFoldersCounter > 0)
+            {
+                message += $"\n\nSkipped ";
+                if (S3PR.SkippedFilesCounter > 0) message += $"{S3PR.SkippedFilesCounter} File{(S3PR.SkippedFilesCounter > 1 ? "s" : "")} ";
+                if (S3PR.SkippedFilesCounter > 0 && S3PR.SkippedFoldersCounter > 0) message += "and ";
+                if (S3PR.SkippedFoldersCounter > 0) message += $"{S3PR.SkippedFoldersCounter} Folder{(S3PR.SkippedFoldersCounter > 1 ? "s" : "")} ";
+                message += "cause the program had no access.";
+            }
+            return message;
         }
 
 
         /**
          * update progress bar thread safe
          */
-        private void updateProgressBar(int value)
+        private void UpdateProgressBar(int value)
         {
             if (progressBar1.InvokeRequired) progressBar1.Invoke(new Action(() => { progressBar1.Value = value; }));
             else progressBar1.Value = value;
@@ -341,7 +336,7 @@ namespace S3PR_GUI
         /**
          * update loading label
          */
-        private void updateLoadingLabel(string text)
+        private void UpdateLoadingLabel(string text)
         {
             if (label1.InvokeRequired) label1.Invoke(new Action(() => { label1.Text = text; }));
             else label1.Text = text;
@@ -351,7 +346,7 @@ namespace S3PR_GUI
         /**
          * switch between "Reduce" and "Stop" text on the execution button
          */
-        private void switchBetweenNormalAndWaitingCursor()
+        private void SwitchBetweenNormalAndWaitingCursor()
         {
             this.Cursor = this.Cursor != Cursors.WaitCursor ? Cursors.WaitCursor : Cursors.Default;
         }
@@ -360,7 +355,7 @@ namespace S3PR_GUI
         /**
          * switch between "Reduce" and "Stop" text on the execution button
          */
-        private void switchBetweenReduceAndStopButton()
+        private void SwitchBetweenReduceAndStopButton()
         {
             if (button2.InvokeRequired) button2.Invoke(new Action(() => { button2.Text = button2.Text != "Stop" ? "Stop" : "Reduce"; }));
             else button2.Text = button2.Text != "Stop" ? "Stop" : "Reduce";
@@ -370,7 +365,7 @@ namespace S3PR_GUI
         /**
          * toggle input UI elements between enabled and disabled
          */
-        private void disableEnableAllUIInputElements(bool enable)
+        private void DisableEnableAllUIInputElements(bool enable)
         {
             if (groupBox1.InvokeRequired) groupBox1.Invoke(new Action(() => { groupBox1.Enabled = enable; }));
             else groupBox1.Enabled = enable;
@@ -382,7 +377,7 @@ namespace S3PR_GUI
         /**
          * save all Values from the UI Elements to the user default values
          */
-        private void saveUserDefaultValues()
+        private void SaveUserDefaultValues()
         {
             Properties.Settings.Default.textBox1 = textBox1.Text;
             Properties.Settings.Default.checkBox1 = checkBox1.Checked;
@@ -390,6 +385,7 @@ namespace S3PR_GUI
             Properties.Settings.Default.checkBox3 = checkBox3.Checked;
             Properties.Settings.Default.checkBox4 = checkBox4.Checked;
             Properties.Settings.Default.checkBox5 = checkBox5.Checked;
+            Properties.Settings.Default.checkBox6 = checkBox6.Checked;
             Properties.Settings.Default.Save();
         }
 
@@ -397,7 +393,7 @@ namespace S3PR_GUI
         /**
          * converts byte unit into a something more human friendly and adds a little funny note to it
          */
-        private string convertByteToOtherUnit(double fileSize)
+        private string ConvertByteToOtherUnit(double fileSize)
         {
             string[] units = { "Byte", "KB (Kilobyte)", "MB (Megabyte)", "GB (Gigabyte)\n\nWOW! Impressive :O", "TB (Terrabyte)\n\nHOLY COW :O Congratulations!", "PB (Petabyte)\n\nOkay, if you see this: you have way to much CC", "EB (Exabyte)\n\nIf you see this, it's probably an error or you're really into horting CC :D" };
             short f = 0;
@@ -407,35 +403,9 @@ namespace S3PR_GUI
 
 
         /**
-         * run Sims 3 Recompressor Executeable
-         */
-        private void S3RC(string inputPathFile, string exePath)
-        {
-            if (!File.Exists(exePath))
-            {
-                throw new Exception("Crucial Files of this Software are missing. Did you delete something? This can't be fixed manually. Please reinstall this program.");
-            }
-
-            ProcessStartInfo psi = new ProcessStartInfo
-            {
-                FileName = exePath,
-                UseShellExecute = false,
-                Arguments = $"\"{inputPathFile}\"",
-                CreateNoWindow = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath)
-            };
-
-            using (Process process = Process.Start(psi))
-            {
-                process?.WaitForExit();
-            }
-        }
-
-
-        /**
          * show message, to inform user, that compressing takes way longer
          */
-        private bool showMessageCompress()
+        private bool ShowMessageCompress()
         {
             return MessageBox.Show(
                 $"Compressing your Package-Files may take some time to process. But it will be worthwhile.\n\n" +
@@ -448,9 +418,38 @@ namespace S3PR_GUI
 
 
         /**
+         * show message, to inform user, that decompressing takes way more space
+         */
+        private bool ShowMessageDecompress()
+        {
+            return MessageBox.Show(
+                $"Decompressing your Package-Files a lot more space. But it will be worthwhile.\n\n" +
+                $"Is that okay?",
+                "Decompressing takes up more space ...",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question
+            ) == DialogResult.OK;
+        }
+
+
+        /**
+         * show message, to inform user, that the options compress and decompress can't be active at the same time
+         */
+        private bool ShowMessageCompressAndDecompressCantBeActiveAtTheSameTime()
+        {
+            return MessageBox.Show(
+                $"Sorry to interrupt: You can't have the compress and decompress option at the same time.\n\n",
+                "No no, not possible, sorry.",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question
+            ) == DialogResult.OK;
+        }
+
+
+        /**
          * show message, to warn user, that reducing the Package-Files is permanent
          */
-        private bool showMessageBackupWarning()
+        private bool ShowMessageBackupWarning()
         {
             if (!checkBox5.Checked) return true;
             return MessageBox.Show(
@@ -464,39 +463,36 @@ namespace S3PR_GUI
 
 
         /**
-         * on click checkbox 
+         * on click compression checkbox 
          */
-        private void checkBox4_CheckedChanged(object sender, EventArgs e)
+        private void CheckBox4_CheckedChanged(object sender, EventArgs e)
         {
             if (!Properties.Settings.Default.compressWarningShown)
             {
-                Properties.Settings.Default.compressWarningShown = showMessageCompress();
+                Properties.Settings.Default.compressWarningShown = ShowMessageCompress();
                 Properties.Settings.Default.Save();
+            }
+            if (checkBox6.Checked && checkBox4.Checked)
+            {
+                checkBox6.Checked = false;
             }
         }
 
 
         /**
-         * extract the Sims 3 Recompressor Tool (s3rc.exe) into the temp folder from the packaged exe file of this tool
+         * on click decompression checkbox 
          */
-        private string ExtractS3RC()
+        private void CheckBox6_CheckedChanged(object sender, EventArgs e)
         {
-            string tempPath = Path.Combine(Path.GetTempPath(), $"s3rc_{Guid.NewGuid()}.exe");
-
-            var assembly = Assembly.GetExecutingAssembly();
-            string resourceName = "S3PR_GUI.s3rc.exe";
-
-            using (Stream resource = assembly.GetManifestResourceStream(resourceName))
+            if (!Properties.Settings.Default.decompressWarningShown)
             {
-                if (resource == null) throw new Exception("Embedded tool not found.");
-
-                using (FileStream file = new FileStream(tempPath, FileMode.Create, FileAccess.Write))
-                {
-                    resource.CopyTo(file);
-                }
+                Properties.Settings.Default.decompressWarningShown = ShowMessageDecompress();
+                Properties.Settings.Default.Save();
             }
-
-            return tempPath;
+            if (checkBox6.Checked && checkBox4.Checked)
+            {
+                checkBox4.Checked = false;
+            }
         }
     }
 }
