@@ -68,11 +68,11 @@ namespace OhRudi
             {
                 FileName = exePath,
                 UseShellExecute = false,
-                Arguments = $"\"{inputPathFile}\"",
+                Arguments = $"\"{Path.GetFullPath(inputPathFile)}\"",
                 CreateNoWindow = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath)
+                WorkingDirectory = Path.GetDirectoryName(exePath)!
             };
-
+            
             using (Process process = Process.Start(psi))
             {
                 process?.WaitForExit();
@@ -86,9 +86,9 @@ namespace OhRudi
             {
                 FileName = exePath,
                 UseShellExecute = false,
-                Arguments = $"-d \"{inputPathFile}\"",
+                Arguments = $"-d \"{Path.GetFullPath(inputPathFile)}\"",
                 CreateNoWindow = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath)
+                WorkingDirectory = Path.GetDirectoryName(exePath)!
             };
 
             using (Process process = Process.Start(psi))
