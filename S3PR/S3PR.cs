@@ -18,6 +18,7 @@ namespace OhRudi
         private bool CompressFile { get; set; } = false;
         private bool DecompressFile { get; set; } = false;
         private bool SearchRecursive { get; set; } = false;
+        private bool ConsoleSilent { get; set; } = false;
         public List<string> SkippedFiles { get; private set; } = [];
 
         public List<string> SkippedFolders { get; private set; } = [];
@@ -41,6 +42,28 @@ namespace OhRudi
 
 
         /**
+         * out string to console if silent setting is not set, but can be overriden by parameter
+         */
+        private void ConsoleWrite(string input, bool overrideSilentFlag = false)
+        {
+            if (!ConsoleSilent || overrideSilentFlag) Console.WriteLine(input);
+        }
+
+
+        /**
+         * out active settings console
+         */
+        private void OutSettings()
+        {
+            if (SearchRecursive) ConsoleWrite("Setting: Search in subfolders for Package-Files");
+            if (RemoveThumbnail) ConsoleWrite("Setting: Remove thumbnail resources");
+            if (RemoveIcon) ConsoleWrite("Setting: Remove icon resources");
+            if (CompressFile) ConsoleWrite("Setting: Compress Package-Files");
+            if (DecompressFile) ConsoleWrite("Setting: Decompress Package-Files");
+        }
+
+
+        /**
          * starts console application
          */
         public void StartConsoleApplication(string[] args)
@@ -55,38 +78,38 @@ namespace OhRudi
                 {
                     switch (arg)
                     {
+                        case "-s":
+                        case "--silent":
+                            ConsoleSilent = true;
+                            break;
                         case "-r":
                         case "--search-recursive":
                             SearchRecursive = true;
-                            Console.WriteLine("Setting: Search in subfolders for Package-Files");
                             break;
                         case "-t":
                         case "--remove-thumbnail":
                             RemoveThumbnail = true;
-                            Console.WriteLine("Setting: Remove thumbnail resources");
                             break;
                         case "-i":
                         case "--remove-icon":
                             RemoveIcon = true;
-                            Console.WriteLine("Setting: Remove icon resources");
                             break;
                         case "-c":
                         case "--compress-file":
+                            if (DecompressFile) break;
                             CompressFile = true;
-                            Console.WriteLine("Setting: Compress Package-Files");
                             break;
                         case "-d":
                         case "--decompress-file":
-                            if (CompressFile) continue;
+                            if (CompressFile) break;
                             DecompressFile = true;
-                            Console.WriteLine("Setting: Decompress Package-Files");
                             break;
                         case "-h":
                         case "--help":
-                            Console.WriteLine($"Usage:\r\nS3PR.exe [options] <paths to folders or files...>\r\n\r\nOptions:\r\n-r, --search-recursive     Search directories recursively when looking for Package-Files.\r\n\r\n-t, --remove-thumbnail     Remove thumbnail resources from Package-Files.\r\n\r\n-i, --remove-icon          Remove icon resources from Package-Files.\r\n\r\n-c, --compress-file        Compress Package-Files.\r\n\r\n-d, --decompress-file      Decompress Package-Files.\r\n\r\n-h, --help                 Show this help message and exit.\r\n\r\nArguments:\r\n<paths...>                 One or more files or folders to process.\r\n");
+                            ConsoleWrite($"Usage:\r\nS3PR.exe [options] <paths to folders or files...>\r\n\r\nOptions:\r\n-r, --search-recursive     Search directories recursively when looking for Package-Files.\r\n\r\n-t, --remove-thumbnail     Remove thumbnail resources from Package-Files.\r\n\r\n-i, --remove-icon          Remove icon resources from Package-Files.\r\n\r\n-c, --compress-file        Compress Package-Files.\r\n\r\n-d, --decompress-file      Decompress Package-Files.\r\n\r\n-h, --help                 Show this help message and exit.\r\n\r\nArguments:\r\n<paths...>                 One or more files or folders to process.\r\n", true);
                             return;
                         default:
-                            Console.WriteLine($"Unsupported Option \"{arg}\"");
+                            ConsoleWrite($"Unsupported Option \"{arg}\"", true);
                             return;
                     }
                 }
@@ -104,10 +127,11 @@ namespace OhRudi
 
                 using (var spinner = new Spinner())
                 {
+                    OutSettings();
                     spinner.Start();
                     IEnumerable<string> pathEnumerable = FindPackageFiles(paths.ToArray(), SearchRecursive);
                     if (pathEnumerable.Count() <= 0) throw new Exception($"The selected folder{(pathEnumerable.Count() > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.");
-                    Console.WriteLine($"Editing {pathEnumerable.Count()} packages");
+                    ConsoleWrite($"Editing {pathEnumerable.Count()} packages");
                     foreach (string path in pathEnumerable)
                     {
                         EditPackage(path, RemoveThumbnail, RemoveIcon);
@@ -116,16 +140,16 @@ namespace OhRudi
                     }
                     spinner.Stop();
                 }
-                Console.WriteLine(GetSkippedFilesAndFoldersMessage());
-                Console.WriteLine($"Done.");
+                ConsoleWrite(GetSkippedFilesAndFoldersMessage());
+                ConsoleWrite($"Done.");
             }
             catch (Exception exception)
             {
-                Console.WriteLine(exception.Message);
+                ConsoleWrite(exception.Message, true);
                 Environment.ExitCode = 1;
             }
-            Console.WriteLine("Press any key to close the program ...");
-            Console.ReadKey();
+            ConsoleWrite("Press any key to close the program ...");
+            if (!ConsoleSilent) Console.ReadKey();
         }
 
 

@@ -8,10 +8,8 @@ namespace OhRudi
 
         [DllImport("kernel32.dll")]
         static extern bool AllocConsole();
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        //[STAThread]
+        
+        [STAThread]
         public static void Main(string[] args)
         {
             // if main got console arguments
@@ -27,9 +25,11 @@ namespace OhRudi
             // else: start GUI
             // the main code is not in this method
             // look at Form1.cs
-            ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
-
+            else { 
+                ApplicationConfiguration.Initialize();
+                Application.Run(new Form1());
+                return;
+            }
         }
     }
 }

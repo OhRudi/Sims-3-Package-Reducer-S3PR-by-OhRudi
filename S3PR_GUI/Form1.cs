@@ -1,4 +1,5 @@
 using System.Reflection;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
 namespace OhRudi
@@ -12,11 +13,24 @@ namespace OhRudi
         private string defaultWindowTitle = "Sims 3 Package Reducer (S3PR) by OhRudi";
         private S3RC S3RC = S3RC.GetInstance;
         private S3PR S3PR = S3PR.GetInstance;
+        private string pathDefault
+        {
+            get
+            {
+                string pathInternal, parentDir;
+                if (Directory.Exists(pathInternal = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Electronic Arts", "The Sims 3", "Mods", "Cache")))
+                    return pathInternal;
+                else if (Directory.Exists(parentDir = Path.GetDirectoryName(pathInternal)!))
+                    return parentDir;
+                return "";
+            }
+        }
 
         public Form1()
         {
             InitializeComponent();
         }
+
 
         /**
          * while loading form
@@ -29,7 +43,6 @@ namespace OhRudi
 
             // set icon (cause any other did not work)
             this.Icon = Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
-            string path_default;
 
             // set last values, that user used last time
             checkBox1.Checked = Properties.Settings.Default.checkBox1;
@@ -41,24 +54,30 @@ namespace OhRudi
             textBox1.Text = Properties.Settings.Default.textBox1;
 
             // set default path to mods folder
-            if (string.IsNullOrEmpty(textBox1.Text) &&
-                Path.Exists(path_default = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Electronic Arts", "The Sims 3", "Mods")))
+            if (string.IsNullOrEmpty(textBox1.Text))
             {
-                textBox1.Text = path_default;
+                textBox1.Text = pathDefault;
             }
         }
+
 
         /**
          * on browse button click
          */
         private void button1_Click(object sender, EventArgs e)
         {
-            var dialog = new FolderBrowserDialog();
-            dialog.Multiselect = true;
-
-            if (dialog.ShowDialog() == DialogResult.OK)
+            try
             {
-                textBox1.Text = string.Join(", ", dialog.SelectedPaths);
+                string initialPath;
+                using FolderBrowserDialog dialog = new FolderBrowserDialog();
+                dialog.Multiselect = true;
+                dialog.SelectedPath = Directory.Exists(initialPath = textBox1.Text.Split(", ")[0]) ? initialPath : pathDefault;
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    textBox1.Text = dialog.SelectedPath;
+            }
+            catch (Exception exception)
+            {
+                ShowErrorMessageBox(exception);
             }
         }
 
