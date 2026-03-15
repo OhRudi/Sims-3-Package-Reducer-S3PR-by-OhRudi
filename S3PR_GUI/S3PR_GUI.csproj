@@ -20,6 +20,7 @@
     <PackageIcon>..\icon.png</PackageIcon>
     <ApplicationIcon>..\icon.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
+    <StartupObject>OhRudi.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

@@ -36,8 +36,18 @@ namespace OhRudi
          */
         public static void Main(string[] args)
         {
+            GetInstance.StartConsoleApplication(args);
+        }
+
+
+        /**
+         * starts console application
+         */
+        public void StartConsoleApplication(string[] args)
+        {
+            Environment.ExitCode = 0;
             if (args.Length == 0) args = ["--help"];
-            
+
             List<string> paths = new List<string>();
             foreach (var arg in args)
             {
@@ -47,28 +57,28 @@ namespace OhRudi
                     {
                         case "-r":
                         case "--search-recursive":
-                            GetInstance.SearchRecursive = true;
+                            SearchRecursive = true;
                             Console.WriteLine("Setting: Search in subfolders for Package-Files");
                             break;
                         case "-t":
                         case "--remove-thumbnail":
-                            GetInstance.RemoveThumbnail = true;
+                            RemoveThumbnail = true;
                             Console.WriteLine("Setting: Remove thumbnail resources");
                             break;
                         case "-i":
-                        case "--remove-icon": 
-                            GetInstance.RemoveIcon = true;
+                        case "--remove-icon":
+                            RemoveIcon = true;
                             Console.WriteLine("Setting: Remove icon resources");
                             break;
                         case "-c":
                         case "--compress-file":
-                            GetInstance.CompressFile = true;
+                            CompressFile = true;
                             Console.WriteLine("Setting: Compress Package-Files");
                             break;
                         case "-d":
                         case "--decompress-file":
-                            if (GetInstance.CompressFile) continue;
-                            GetInstance.DecompressFile = true;
+                            if (CompressFile) continue;
+                            DecompressFile = true;
                             Console.WriteLine("Setting: Decompress Package-Files");
                             break;
                         case "-h":
@@ -87,7 +97,7 @@ namespace OhRudi
             }
             try
             {
-                if (!GetInstance.RemoveIcon && !GetInstance.RemoveThumbnail && !GetInstance.CompressFile && !GetInstance.DecompressFile)
+                if (!RemoveIcon && !RemoveThumbnail && !CompressFile && !DecompressFile)
                 {
                     throw new Exception($"Please enter at least one of the options (like \"--remove-icon\", \"--remove-thumbnail\", etc.) to edit the Package-Files.");
                 }
@@ -95,22 +105,24 @@ namespace OhRudi
                 using (var spinner = new Spinner())
                 {
                     spinner.Start();
-                    IEnumerable<string> pathEnumerable = S3PR.GetInstance.FindPackageFiles(paths.ToArray(), S3PR.GetInstance.SearchRecursive);
+                    IEnumerable<string> pathEnumerable = FindPackageFiles(paths.ToArray(), SearchRecursive);
                     if (pathEnumerable.Count() <= 0) throw new Exception($"The selected folder{(pathEnumerable.Count() > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.");
                     Console.WriteLine($"Editing {pathEnumerable.Count()} packages");
                     foreach (string path in pathEnumerable)
                     {
-                        GetInstance.EditPackage(path, GetInstance.RemoveThumbnail, GetInstance.RemoveIcon);
-                        if (GetInstance.CompressFile) GetInstance.S3RC.Compress(path);
-                        if (GetInstance.DecompressFile) GetInstance.S3RC.Decompress(path);
+                        EditPackage(path, RemoveThumbnail, RemoveIcon);
+                        if (CompressFile) S3RC.Compress(path);
+                        if (DecompressFile) S3RC.Decompress(path);
                     }
                     spinner.Stop();
                 }
-                Console.WriteLine(GetInstance.GetSkippedFilesAndFoldersMessage());
+                Console.WriteLine(GetSkippedFilesAndFoldersMessage());
                 Console.WriteLine($"Done.");
             }
-            catch (Exception exception) {
+            catch (Exception exception)
+            {
                 Console.WriteLine(exception.Message);
+                Environment.ExitCode = 1;
             }
             Console.WriteLine("Press any key to close the program ...");
             Console.ReadKey();
