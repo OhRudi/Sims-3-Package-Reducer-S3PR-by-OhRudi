@@ -106,7 +106,7 @@ namespace OhRudi
                             break;
                         case "-h":
                         case "--help":
-                            ConsoleWrite($"Usage:\r\nS3PR.exe [options] <paths to folders or files...>\r\n\r\nOptions:\r\n-r, --search-recursive     Search directories recursively when looking for Package-Files.\r\n\r\n-t, --remove-thumbnail     Remove thumbnail resources from Package-Files.\r\n\r\n-i, --remove-icon          Remove icon resources from Package-Files.\r\n\r\n-c, --compress-file        Compress Package-Files.\r\n\r\n-d, --decompress-file      Decompress Package-Files.\r\n\r\n-h, --help                 Show this help message and exit.\r\n\r\nArguments:\r\n<paths...>                 One or more files or folders to process.\r\n", true);
+                            ConsoleWrite($"Usage:\r\nS3PR.exe [options] <paths to folders or files...>\r\n\r\nOptions:\r\n-r, --search-recursive     Search directories recursively when looking for Package-Files.\r\n\r\n-t, --remove-thumbnail     Remove thumbnail resources from Package-Files.\r\n\r\n-i, --remove-icon          Remove icon resources from Package-Files.\r\n\r\n-c, --compress-file        Compress Package-Files.\r\n\r\n-d, --decompress-file      Decompress Package-Files.\r\n\r\n-s, --silent               No Console Output.\r\n\r\n-h, --help                 Show this help message and exit.\r\n\r\nArguments:\r\n<paths...>                 One or more files or folders to process.\r\n", true);
                             return;
                         default:
                             ConsoleWrite($"Unsupported Option \"{arg}\"", true);
