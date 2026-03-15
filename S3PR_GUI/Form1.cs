@@ -45,13 +45,13 @@ namespace OhRudi
             this.Icon = Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
 
             // set last values, that user used last time
-            checkBox1.Checked = Properties.Settings.Default.checkBox1;
-            checkBox2.Checked = Properties.Settings.Default.checkBox2;
-            checkBox3.Checked = Properties.Settings.Default.checkBox3;
-            checkBox4.Checked = Properties.Settings.Default.checkBox4;
-            checkBox5.Checked = Properties.Settings.Default.checkBox5;
-            checkBox6.Checked = Properties.Settings.Default.checkBox6;
-            textBox1.Text = Properties.Settings.Default.textBox1;
+            checkBox1.Checked = S3PR_GUI.Properties.Settings.Default.checkBox1;
+            checkBox2.Checked = S3PR_GUI.Properties.Settings.Default.checkBox2;
+            checkBox3.Checked = S3PR_GUI.Properties.Settings.Default.checkBox3;
+            checkBox4.Checked = S3PR_GUI.Properties.Settings.Default.checkBox4;
+            checkBox5.Checked = S3PR_GUI.Properties.Settings.Default.checkBox5;
+            checkBox6.Checked = S3PR_GUI.Properties.Settings.Default.checkBox6;
+            textBox1.Text = S3PR_GUI.Properties.Settings.Default.textBox1;
 
             // set default path to mods folder
             if (string.IsNullOrEmpty(textBox1.Text))
@@ -361,14 +361,14 @@ namespace OhRudi
          */
         private void SaveUserDefaultValues()
         {
-            Properties.Settings.Default.textBox1 = textBox1.Text;
-            Properties.Settings.Default.checkBox1 = checkBox1.Checked;
-            Properties.Settings.Default.checkBox2 = checkBox2.Checked;
-            Properties.Settings.Default.checkBox3 = checkBox3.Checked;
-            Properties.Settings.Default.checkBox4 = checkBox4.Checked;
-            Properties.Settings.Default.checkBox5 = checkBox5.Checked;
-            Properties.Settings.Default.checkBox6 = checkBox6.Checked;
-            Properties.Settings.Default.Save();
+            S3PR_GUI.Properties.Settings.Default.textBox1 = textBox1.Text;
+            S3PR_GUI.Properties.Settings.Default.checkBox1 = checkBox1.Checked;
+            S3PR_GUI.Properties.Settings.Default.checkBox2 = checkBox2.Checked;
+            S3PR_GUI.Properties.Settings.Default.checkBox3 = checkBox3.Checked;
+            S3PR_GUI.Properties.Settings.Default.checkBox4 = checkBox4.Checked;
+            S3PR_GUI.Properties.Settings.Default.checkBox5 = checkBox5.Checked;
+            S3PR_GUI.Properties.Settings.Default.checkBox6 = checkBox6.Checked;
+            S3PR_GUI.Properties.Settings.Default.Save();
         }
 
 
@@ -438,10 +438,10 @@ namespace OhRudi
          */
         private void CheckBox4_CheckedChanged(object sender, EventArgs e)
         {
-            if (!Properties.Settings.Default.compressWarningShown)
+            if (!S3PR_GUI.Properties.Settings.Default.compressWarningShown)
             {
-                Properties.Settings.Default.compressWarningShown = ShowMessageCompress();
-                Properties.Settings.Default.Save();
+                S3PR_GUI.Properties.Settings.Default.compressWarningShown = ShowMessageCompress();
+                S3PR_GUI.Properties.Settings.Default.Save();
             }
             if (checkBox6.Checked && checkBox4.Checked)
             {
@@ -455,10 +455,10 @@ namespace OhRudi
          */
         private void CheckBox6_CheckedChanged(object sender, EventArgs e)
         {
-            if (!Properties.Settings.Default.decompressWarningShown)
+            if (!S3PR_GUI.Properties.Settings.Default.decompressWarningShown)
             {
-                Properties.Settings.Default.decompressWarningShown = ShowMessageDecompress();
-                Properties.Settings.Default.Save();
+                S3PR_GUI.Properties.Settings.Default.decompressWarningShown = ShowMessageDecompress();
+                S3PR_GUI.Properties.Settings.Default.Save();
             }
             if (checkBox6.Checked && checkBox4.Checked)
             {
