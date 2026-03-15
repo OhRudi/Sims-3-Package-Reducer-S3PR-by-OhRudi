@@ -171,11 +171,11 @@ namespace OhRudi
          */
         private void ExecuteFileEdit()
         {
-            bool removeThumbnails = checkBox1.Checked;
-            bool removeIcons = checkBox2.Checked;
-            bool searchRecursive = checkBox3.Checked;
-            bool compressFile = checkBox4.Checked;
-            bool decompressFile = checkBox6.Checked;
+            S3PR.RemoveThumbnail = checkBox1.Checked;
+            S3PR.RemoveIcon = checkBox2.Checked;
+            S3PR.SearchRecursive = checkBox3.Checked;
+            S3PR.CompressFile = checkBox4.Checked;
+            S3PR.DecompressFile = checkBox6.Checked;
             string[] pathFolderList = textBox1.Text.Split(", ");
             IEnumerable<string> pathEnumerable;
             int progress = 0;
@@ -189,7 +189,7 @@ namespace OhRudi
                 return;
             }
 
-            if (!removeIcons && !removeThumbnails && !compressFile && !decompressFile)
+            if (!S3PR.RemoveIcon && !S3PR.RemoveThumbnail && !S3PR.CompressFile && !S3PR.DecompressFile)
             {
                 MessageBox.Show($"Please click at least one of the options (like \"{checkBox1.Text}\", \"{checkBox2.Text}\", etc.) to edit the Package-Files.", "What to do? You missed something ...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -198,7 +198,7 @@ namespace OhRudi
             try
             {
                 // find all package files in all folders
-                pathEnumerable = S3PR.FindPackageFiles(pathFolderList, searchRecursive);
+                pathEnumerable = S3PR.FindPackageFiles(pathFolderList, S3PR.SearchRecursive);
                 int count = pathEnumerable.Count();
 
                 // edit each file seperately
@@ -210,9 +210,9 @@ namespace OhRudi
                         progressTillStopped++;
                         lastPath = pathFile;
                         fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
-                        S3PR.EditPackage(pathFile, removeThumbnails, removeIcons);
-                        if (compressFile) S3RC.Compress(pathFile);
-                        if (decompressFile) S3RC.Decompress(pathFile);
+                        S3PR.EditPackage(pathFile, S3PR.RemoveThumbnail, S3PR.RemoveIcon);
+                        if (S3PR.CompressFile) S3RC.Compress(pathFile);
+                        if (S3PR.DecompressFile) S3RC.Decompress(pathFile);
                         fileSizeAfterInByte += (double)(new FileInfo(pathFile)).Length;
                     }
                     int progressBarPercentValue = (++progress * 100) / count;
@@ -241,13 +241,13 @@ namespace OhRudi
             // if process got stopped via UI-Button
             if (stopExecution)
             {
-                ShowStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte, decompressFile);
+                ShowStopMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
             }
 
             // if process ran sucessfully
             else
             {
-                ShowSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte, decompressFile);
+                ShowSuccessMessageBox(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte);
             }
         }
 
@@ -279,31 +279,11 @@ namespace OhRudi
         /**
          * show stop message box
          */
-        private void ShowStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte, bool decompressionEnabled = false)
+        private void ShowStopMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
         {
-            string message = $"Process Stopped.";
-            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFiles.Count;
-            if (progressMinusSkipped < 0) progressMinusSkipped = 0;
-            if (progressMinusSkipped > 0)
-            {
-                if (fileSizeBeforeInByte - fileSizeAfterInByte > 0)
-                {
-                    message += $"\n\nBefore it stopped, it reduced {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
-                }
-                else if (decompressionEnabled && (fileSizeBeforeInByte - fileSizeAfterInByte) != 0)
-                {
-                    message += $"\n\nBefore it stopped, it decompressed {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeAfterInByte - fileSizeBeforeInByte)}";
-                }
-                else
-                {
-                    message += $"\n\nBefore it stopped, it checked {progressMinusSkipped} Package-File{(progressMinusSkipped > 1 ? "s" : "")} but, {(progressMinusSkipped > 1 ? "they were" : "it was")} already edited{(decompressionEnabled ? " and decompressed" : "")}, so nothing changed.";
-                }
-            }
-            message += $"\n\nLast processed File: {lastPath}";
-            message += S3PR.GetSkippedFilesAndFoldersMessage();
-
             MessageBox.Show(
-                message,
+                S3PR.GetStopSummaryMessage(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte, lastPath)
+                + S3PR.GetSkippedFilesAndFoldersMessage(),
                 "Oh, you stopped?",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning
@@ -314,29 +294,10 @@ namespace OhRudi
         /**
          * show success message box
          */
-        private void ShowSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte, bool decompressionEnabled = false)
+        private void ShowSuccessMessageBox(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
         {
-            string message = $"Done.";
-            int progressMinusSkipped = progressTillStopped - S3PR.SkippedFiles.Count;
-
-            if (progressMinusSkipped > 0)
-            {
-                if ((fileSizeBeforeInByte - fileSizeAfterInByte) > 0)
-                {
-                    message += $"\n\nReduced {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
-                }
-                else if (decompressionEnabled && (fileSizeBeforeInByte - fileSizeAfterInByte) != 0)
-                {
-                    message += $"\n\nDecompressed {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeAfterInByte - fileSizeBeforeInByte)}";
-                }
-                else
-                {
-                    message += $"\n\nIt checked {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} but, {(progressMinusSkipped != 1 ? "they were" : "it was")} already edited{(decompressionEnabled ? " and decompressed" : "")}, so nothing changed.";
-                }
-            }
-            message += S3PR.GetSkippedFilesAndFoldersMessage();
-
-            MessageBox.Show(message,
+            MessageBox.Show(S3PR.GetSuccessSummaryMessage(progressTillStopped, fileSizeBeforeInByte, fileSizeAfterInByte)
+                + S3PR.GetSkippedFilesAndFoldersMessage(),
                 "Wuhuuu, it's done!",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
@@ -412,26 +373,15 @@ namespace OhRudi
 
 
         /**
-         * converts byte unit into a something more human friendly and adds a little funny note to it
-         */
-        private string ConvertByteToOtherUnit(double fileSize)
-        {
-            string[] units = { "Byte", "KB (Kilobyte)", "MB (Megabyte)", "GB (Gigabyte)\n\nWOW! Impressive :O", "TB (Terrabyte)\n\nHOLY COW :O Congratulations!", "PB (Petabyte)\n\nOkay, if you see this: you have way to much CC", "EB (Exabyte)\n\nIf you see this, it's probably an error or you're really into horting CC :D" };
-            short f = 0;
-            for (; fileSize > 1000; f++) fileSize /= 1000;
-            return $"{string.Format("{0:0.0}", fileSize)} {units[f]}";
-        }
-
-
-        /**
          * show message, to inform user, that compressing takes way longer
          */
         private bool ShowMessageCompress()
         {
             return MessageBox.Show(
-                $"Compressing your Package-Files may take some time to process. But it will be worthwhile.\n\n" +
-                $"Is that okay?",
-                "Compressing takes longer ...",
+                $"Compressing reduces the Package-File size drastically and but it's no performance gain for your game, because your game has to decompresses them while playing.\n\n" +
+                $"I'd recommend compressing your individual CC files, but decompressing the merged CC files, such as the builds from CC-Magic.\n\n" +
+                $"Compressing takes a bit longer.",
+                "An important Notice on compressing Package-Files ...",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question
             ) == DialogResult.OK;
@@ -444,9 +394,9 @@ namespace OhRudi
         private bool ShowMessageDecompress()
         {
             return MessageBox.Show(
-                $"Decompressing your Package-Files means they take up 3-times the space.\nBut it will be worthwhile.\nRead the notes on the download page if you need more information on that\n\n" +
-                $"Is that okay?",
-                "Decompressing takes up more space ...",
+                $"Decompressing expands the Package-File size by three times. It's a performance gain while playing, cause your game needs them decompressed anyway.\n\n" +
+                $"I'd recommend compressing your individual CC files, but decompressing the merged CC files, such as the builds from CC-Magic.\n\n",
+                "An important Notice on Deompressing Package-Files ...",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question
             ) == DialogResult.OK;
@@ -459,7 +409,7 @@ namespace OhRudi
         private bool ShowMessageCompressAndDecompressCantBeActiveAtTheSameTime()
         {
             return MessageBox.Show(
-                $"Sorry to interrupt: You can't have the compress and decompress option at the same time.\n\n",
+                $"Sorry to interrupt: You can't use the compress and decompress option at the same time.\n\n",
                 "No no, not possible, sorry.",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question

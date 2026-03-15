@@ -13,12 +13,12 @@ namespace OhRudi
     public class S3PR
     {
 
-        private bool RemoveThumbnail { get; set; } = false;
-        private bool RemoveIcon { get; set; } = false;
-        private bool CompressFile { get; set; } = false;
-        private bool DecompressFile { get; set; } = false;
-        private bool SearchRecursive { get; set; } = false;
-        private bool ConsoleSilent { get; set; } = false;
+        public bool RemoveThumbnail { get; set; } = false;
+        public bool RemoveIcon { get; set; } = false;
+        public bool CompressFile { get; set; } = false;
+        public bool DecompressFile { get; set; } = false;
+        public bool SearchRecursive { get; set; } = false;
+        public bool ConsoleSilent { get; set; } = false;
         public List<string> SkippedFiles { get; private set; } = [];
 
         public List<string> SkippedFolders { get; private set; } = [];
@@ -121,27 +121,33 @@ namespace OhRudi
             try
             {
                 if (!RemoveIcon && !RemoveThumbnail && !CompressFile && !DecompressFile)
-                {
                     throw new Exception($"Please enter at least one of the options (like \"--remove-icon\", \"--remove-thumbnail\", etc.) to edit the Package-Files.");
-                }
+
+                double fileSizeBeforeInByte = 0;
+                double fileSizeAfterInByte = 0;
+
+                IEnumerable<string> pathEnumerable = FindPackageFiles(paths.ToArray(), SearchRecursive);
+                if (pathEnumerable.Count() <= 0) throw new Exception($"The selected folder{(pathEnumerable.Count() > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.");
+
+                OutSettings();
+                ConsoleWrite($"Editing {pathEnumerable.Count()} packages");
 
                 using (var spinner = new Spinner())
                 {
-                    OutSettings();
                     spinner.Start();
-                    IEnumerable<string> pathEnumerable = FindPackageFiles(paths.ToArray(), SearchRecursive);
-                    if (pathEnumerable.Count() <= 0) throw new Exception($"The selected folder{(pathEnumerable.Count() > 1 ? "s do" : " does")} not contain any Package-Files. Please select another folder.");
-                    ConsoleWrite($"Editing {pathEnumerable.Count()} packages");
-                    foreach (string path in pathEnumerable)
+                    foreach (string pathFile in pathEnumerable)
                     {
-                        EditPackage(path, RemoveThumbnail, RemoveIcon);
-                        if (CompressFile) S3RC.Compress(path);
-                        if (DecompressFile) S3RC.Decompress(path);
+                        fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
+                        EditPackage(pathFile, RemoveThumbnail, RemoveIcon);
+                        if (CompressFile) S3RC.Compress(pathFile);
+                        if (DecompressFile) S3RC.Decompress(pathFile);
+                        fileSizeAfterInByte += (double)(new FileInfo(pathFile)).Length;
                     }
                     spinner.Stop();
                 }
+
+                ConsoleWrite(GetSuccessSummaryMessage(pathEnumerable.Count(), fileSizeBeforeInByte, fileSizeAfterInByte));
                 ConsoleWrite(GetSkippedFilesAndFoldersMessage());
-                ConsoleWrite($"Done.");
             }
             catch (Exception exception)
             {
@@ -303,6 +309,72 @@ namespace OhRudi
         {
             SkippedFiles = SkippedFiles.Distinct().ToList();
             SkippedFolders = SkippedFolders.Distinct().ToList();
+        }
+
+
+        /**
+         * converts byte unit into a something more human friendly
+         */
+        private string ConvertByteToOtherUnit(double fileSize)
+        {
+            string[] units = { "Byte", "KB (Kilobyte)", "MB (Megabyte)", "GB (Gigabyte)", "TB (Terrabyte)", "PB (Petabyte)", "EB (Exabyte)" };
+            short f = 0;
+            for (; fileSize > 1000; f++) fileSize /= 1000;
+            return $"{string.Format("{0:0.0}", fileSize)} {units[f]}";
+        }
+
+
+        /**
+         * get summary message of how many files edited and the difference in file size
+         */
+        public string GetSuccessSummaryMessage(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte)
+        {
+            string message = $"Done.";
+            int progressMinusSkipped = progressTillStopped - SkippedFiles.Count;
+
+            if (progressMinusSkipped > 0)
+            {
+                if ((fileSizeBeforeInByte - fileSizeAfterInByte) > 0)
+                {
+                    message += $"\n\n{(DecompressFile ? "Decompressed and r" : "R")}educed {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
+                }
+                else if (DecompressFile && (fileSizeBeforeInByte - fileSizeAfterInByte) != 0)
+                {
+                    message += $"\n\n{(RemoveThumbnail || RemoveIcon ? "Edited and d" : "D")}ecompressed {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")}. {(progressMinusSkipped != 1 ? "They take" : "It takes")} up {ConvertByteToOtherUnit(fileSizeAfterInByte - fileSizeBeforeInByte)} more space now.";
+                }
+                else
+                {
+                    message += $"\n\nIt checked {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} but, {(progressMinusSkipped != 1 ? "they were" : "it was")} already edited{(DecompressFile ? " and decompressed" : "")}, so nothing changed.";
+                }
+            }
+            return message;
+        }
+
+
+        /**
+         * Get Stop Summary Message
+         */
+        public string GetStopSummaryMessage(int progressTillStopped, double fileSizeBeforeInByte, double fileSizeAfterInByte, string lastPath = "")
+        {
+            string message = $"Process Stopped.";
+            int progressMinusSkipped = progressTillStopped - SkippedFiles.Count;
+            if (progressMinusSkipped < 0) progressMinusSkipped = 0;
+            if (progressMinusSkipped > 0)
+            {
+                if (fileSizeBeforeInByte - fileSizeAfterInByte > 0)
+                {
+                    message += $"\n\nBefore it stopped, it {(DecompressFile ? "decompressed and " : "")}reduced {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} in total by {ConvertByteToOtherUnit(fileSizeBeforeInByte - fileSizeAfterInByte)}";
+                }
+                else if (DecompressFile && (fileSizeBeforeInByte - fileSizeAfterInByte) != 0)
+                {
+                    message += $"\n\nBefore it stopped, it {(RemoveThumbnail || RemoveIcon ? "edited and " : "")}decompressed {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")}. {(progressMinusSkipped != 1 ? "They take" : "It takes")} up {ConvertByteToOtherUnit(fileSizeAfterInByte - fileSizeBeforeInByte)} more space now.";
+                }
+                else
+                {
+                    message += $"\n\nBefore it stopped, it checked {progressMinusSkipped} Package-File{(progressMinusSkipped != 1 ? "s" : "")} but, {(progressMinusSkipped != 1 ? "they were" : "it was")} already edited{(DecompressFile ? " and decompressed" : "")}, so nothing changed.";
+                }
+            }
+            return message + $"\n\nLast processed File: {lastPath}";
         }
 
 
