@@ -23,7 +23,7 @@ namespace OhRudi
 
         public List<string> SkippedFolders { get; private set; } = [];
 
-        private S3RC S3RC = S3RC.GetInstance;
+        public S3RC? S3RC = null;
         private static S3PR Instance { get; set; }
 
         public static S3PR GetInstance {
@@ -139,8 +139,7 @@ namespace OhRudi
                     {
                         fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
                         EditPackage(pathFile, RemoveThumbnail, RemoveIcon);
-                        if (CompressFile) S3RC.Compress(pathFile);
-                        if (DecompressFile) S3RC.Decompress(pathFile);
+                        StartConpressDecompress(pathFile);
                         fileSizeAfterInByte += (double)(new FileInfo(pathFile)).Length;
                     }
                     spinner.Stop();
@@ -206,6 +205,7 @@ namespace OhRudi
          */
         public void EditPackage(string path, bool removeThumbnails = false, bool removeIcons = false)
         {
+            S3RC = S3RC.GetInstance;
             Package importPackage = null;
             try { importPackage = Package.Load(path); }
             catch { SkippedFiles.Add(path); return; }
@@ -268,6 +268,17 @@ namespace OhRudi
                 CleanUpTempFile(tempPath, writer, stream);
                 throw new Exception(excpetion.Message);
             }
+        }
+
+
+        /**
+         * start compression and decompression
+         */
+        public void StartConpressDecompress(string pathFile)
+        {
+            S3RC = S3RC.GetInstance;
+            if (CompressFile) S3RC.Compress(pathFile);
+            if (DecompressFile) S3RC.Decompress(pathFile);
         }
 
         

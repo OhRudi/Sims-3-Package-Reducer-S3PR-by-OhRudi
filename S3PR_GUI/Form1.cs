@@ -11,7 +11,6 @@ namespace OhRudi
         private string lastPath = "";
         private bool isDone = false;
         private string defaultWindowTitle = "Sims 3 Package Reducer (S3PR) by OhRudi";
-        private S3RC S3RC = S3RC.GetInstance;
         private S3PR S3PR = S3PR.GetInstance;
         private string pathDefault
         {
@@ -211,8 +210,7 @@ namespace OhRudi
                         lastPath = pathFile;
                         fileSizeBeforeInByte += (double)(new FileInfo(pathFile)).Length;
                         S3PR.EditPackage(pathFile, S3PR.RemoveThumbnail, S3PR.RemoveIcon);
-                        if (S3PR.CompressFile) S3RC.Compress(pathFile);
-                        if (S3PR.DecompressFile) S3RC.Decompress(pathFile);
+                        S3PR.StartConpressDecompress(pathFile);
                         fileSizeAfterInByte += (double)(new FileInfo(pathFile)).Length;
                     }
                     int progressBarPercentValue = (++progress * 100) / count;
@@ -233,7 +231,7 @@ namespace OhRudi
             finally
             {
                 isDone = true;
-                S3RC.DeleteTool();
+                S3PR.S3RC?.DeleteTool();
                 UpdateLoadingLabel("Done.");
             }
 
