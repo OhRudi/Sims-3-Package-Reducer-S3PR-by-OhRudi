@@ -6,7 +6,7 @@ Software to easily reduce, compress and decompress Package-Files for the Sims 3
 - It removes thumbnails (THUM) and icons (ICON) resources from Package-Files and compresses or decompresses them
 - Thumbnails are safe to remove, the game regenerates them (see image explenation)
 - Icons are safe to remove, the game doesn't use them, nor does CC-Magic
-- __Compressing reduces__ the Package-File size drastically and but it's no performance gain for your game, because your game has to decompresses them while playing
+- __Compressing reduces__ the Package-File size drastically, but it's no performance gain for your game, because your game has to decompresses them while playing
 - __Decompressing expands__ the Package-File size by three times. It's a performance gain while playing, cause your game needs them decompressed anyway
 - I'd recommend **compressing your individual CC files**, but **decompressing the merged CC files**, such as the builds from CC-Magic
 - ***DO NOT*** compress mods (like NRaas and other Script-Mods), only compress CC
@@ -34,7 +34,7 @@ dotnet publish .\S3PR_GUI\S3PR_GUI.csproj -c Release -r win-x64 --self-contained
 **Important Notice:** Everything is the same, but if you're into automation, you can use S3PR via the console.
 ```
 Usage:
-S3PR_Console.exe [options] <paths to folders or files...>
+S3PR.exe [options] <paths to folders or files...>
 
 Options:
 -r, --search-recursive     Search directories recursively when looking for Package-Files.
