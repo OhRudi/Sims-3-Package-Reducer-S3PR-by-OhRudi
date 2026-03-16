@@ -56,7 +56,7 @@ Arguments:
 ```
 
 ## Further Explenations
-Further explenations and releases of this software you can find on [ModTheSims](https://modthesims.info/m/10288520), [Simblr](https://simblr.cc/user/326-ohrudi/), or [Tumblr](https://www.tumblr.com/ohrudi)
+Further explenations and releases of this software you can find on [ModTheSims](https://modthesims.info/d/695466), [Simblr](https://simblr.cc/ts3/mod/7431-sims-3-package-reducer-s3pe-by-ohrudi-update-03162026.html), or [Tumblr](https://www.tumblr.com/ohrudi/810367592787296256/overview?source=share)
 
 ## Technical Details
 - It's published under the GNU General Public License (GPL-3.0)
