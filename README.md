@@ -60,7 +60,7 @@ Further explenations and releases of this software you can find on [ModTheSims](
 
 ## Technical Details
 - It's published under the GNU General Public License (GPL-3.0)
-- Feel free to change fork the code and change it any way you like, this source code meant to be public, free and open
+- Feel free to fork the code and change it in any way you like, cause this source is code meant to be public, free and open
 - I used __Visual Studio 2026 with .NET 10.0__ and WinForms API to create the GUI
 
 ## Big thanks to ...
